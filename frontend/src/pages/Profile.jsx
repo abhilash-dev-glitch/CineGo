@@ -1,13 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { UsersAPI, BookingAPI } from '../lib/api';
-import { useAuth } from '../store/auth';
+import { useDispatch, useSelector } from 'react-redux';
 import { toast } from '../lib/toast';
+import { checkAuth, logout } from '../store/authSlice';
 
 export default function Profile() {
-  const { user, logout } = useAuth();
-  const refreshMe = useAuth(s => s.init);
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => ({
+    user: state.auth.user
+  }));
+  
+  // Function to refresh user data
+  const refreshUser = async () => {
+    try {
+      await dispatch(checkAuth()).unwrap();
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+    }
+  };
+
   const [preview, setPreview] = useState(null);
+  // ... (rest of the file is the same)
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState(user?.name || '');
@@ -66,7 +80,7 @@ export default function Profile() {
     try {
       await UsersAPI.uploadProfilePicture(file);
       toast.success('Profile picture updated');
-      await refreshMe();
+      await refreshUser();
       setPreview(null);
     } catch (err) {
       toast.error('Upload failed', err?.response?.data?.message || 'Please try again');
@@ -85,7 +99,7 @@ export default function Profile() {
     try {
       await UsersAPI.updateMe({ name: name.trim(), email: email.trim() });
       toast.success('Profile updated');
-      await refreshMe();
+      await refreshUser();
     } catch (err) {
       toast.error('Update failed', err?.response?.data?.message || 'Please try again');
     } finally {
@@ -107,7 +121,7 @@ export default function Profile() {
           </p>
         </div>
         <button
-          onClick={logout}
+          onClick={() => dispatch(logout())}
           className="mt-4 sm:mt-0 px-4 py-2.5 rounded-lg bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-sm font-medium shadow-lg hover:shadow-red-500/20 transition-all duration-200 flex items-center"
         >
           <svg

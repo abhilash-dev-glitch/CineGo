@@ -24,16 +24,25 @@ api.interceptors.request.use((config) => {
 
 export const MoviesAPI = {
   list: async (params) => {
-    const response = await api.get('/movies', { params });
-    // Handle different response structures
-    if (response.data && response.data.data && response.data.data.movies) {
-      return response.data.data.movies;
-    } else if (Array.isArray(response.data)) {
-      return response.data;
-    } else if (response.data && response.data.data) {
-      return response.data.data;
+    try {
+      const response = await api.get('/movies', { params });
+      console.log('Movies API Response:', response.data); // Debug log
+      
+      // Handle different response structures
+      if (response.data?.data?.movies) {
+        return response.data.data.movies;
+      } else if (response.data?.data) {
+        return Array.isArray(response.data.data) ? response.data.data : [response.data.data];
+      } else if (Array.isArray(response.data)) {
+        return response.data;
+      } else if (response.data) {
+        return [response.data];
+      }
+      return [];
+    } catch (error) {
+      console.error('Error fetching movies:', error);
+      return [];
     }
-    return [];
   },
   get: async (id) => {
     const response = await api.get(`/movies/${id}`);
@@ -66,6 +75,8 @@ export const ShowtimesAPI = {
 
 export const BookingAPI = {
   lockedSeats: (showtimeId) => api.get(`/bookings/showtime/${showtimeId}/locked-seats`).then(r => r.data.data),
+  lockSeat: (showtimeId, seatData) => api.post(`/bookings/lock-seat`, { showtimeId, ...seatData }).then(r => r.data.data),
+  unlockSeat: (showtimeId, seatData) => api.post(`/bookings/unlock-seat`, { showtimeId, ...seatData }).then(r => r.data.data),
   checkSeats: (payload) => api.post('/bookings/check-seats', payload).then(r => r.data.data),
   create: (payload) => api.post('/bookings', payload).then(r => r.data.data.booking),
   myBookings: () => api.get('/bookings/my-bookings').then(r => r.data.data.bookings),

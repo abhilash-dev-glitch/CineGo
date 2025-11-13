@@ -1,9 +1,21 @@
-import { NavLink, Outlet } from 'react-router-dom';
-import { useAuth } from '../../store/auth'; // Corrected import path
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { logout } from '../../store/authSlice';
 import { FiGrid, FiFilm, FiHome, FiCalendar, FiUsers, FiUserCheck, FiLogOut } from 'react-icons/fi';
 
 const AdminLayout = () => {
-  const { user, logout } = useAuth();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const user = useSelector((state) => state.auth.user);
+  
+  const handleLogout = async () => {
+    try {
+      await dispatch(logout()).unwrap();
+      navigate('/signin');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
   
   const navItems = [
     { name: 'Dashboard', path: '/admin', icon: <FiGrid /> },
@@ -35,7 +47,7 @@ const AdminLayout = () => {
         
         <div className="px-4 py-4 border-t border-gray-700">
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="w-full flex items-center px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
           >
             <FiLogOut className="mr-3 h-5 w-5" />

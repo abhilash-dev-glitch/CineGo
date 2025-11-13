@@ -1,36 +1,66 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, Link, useLocation } from 'react-router-dom'
-import { useAuth } from '../store/auth'
-import { toast } from '../lib/toast'
-import AuthRedirect from '../components/AuthRedirect'
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { login, clearError } from '../store/authSlice';
+import { toast } from '../lib/toast';
+import AuthRedirect from '../components/AuthRedirect';
 
 export default function SignIn(){
   const navigate = useNavigate()
   const location = useLocation()
-  const login = useAuth(s => s.login)
-  const error = useAuth(s => s.error)
-  const loading = useAuth(s => s.loading)
+
+  const dispatch = useDispatch();
+  const { user, loading, error, errors } = useSelector((state) => ({
+    user: state.auth.user,
+    loading: state.auth.loading,
+    error: state.auth.error,
+    errors: state.auth.errors
+  }));
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [roleTarget, setRoleTarget] = useState('endUser')
-
-  const { user } = useAuth()
   
   // If user is already logged in, AuthRedirect will handle the redirection
-  if (user) {
-    return <AuthRedirect to="/" />
-  }
+  useEffect(() => {
+    if (user) {
+      return <AuthRedirect to="/" />;
+    }
+  }, [user]);
+
+  // Clear errors when component unmounts
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
 
   const onSubmit = async (e) => {
-    e.preventDefault()
-    const loggedInUser = await login(email, password)
-    if (!loggedInUser) { 
-      toast.error('Sign in failed', 'Please check your email and password.'); 
-      return 
-    }
-    toast.success('Welcome back', `Signed in as ${loggedInUser.name || loggedInUser.email}`)
+    e.preventDefault();
+    const resultAction = await dispatch(login({ email, password }));
     
-    // No need to navigate here - the AuthRedirect will handle it after state updates
+    if (login.fulfilled.match(resultAction)) {
+      const loggedInUser = resultAction.payload;
+      toast.success('Welcome back', `Signed in as ${loggedInUser.name || loggedInUser.email}`);
+      
+      // Handle redirect logic after login
+      const fromLocation = location.state?.from;
+
+      if (loggedInUser.role === 'admin') {
+        navigate('/admin', { replace: true });
+      } else if (loggedInUser.role === 'theaterManager') {
+        navigate('/manager', { replace: true });
+      } else if (fromLocation) {
+        navigate(fromLocation.pathname + fromLocation.search, { 
+          replace: true, 
+          state: fromLocation.state 
+        });
+      } else {
+        navigate('/', { replace: true });
+      }
+    } else {
+      toast.error('Sign in failed', 'Please check your email and password.');
+    }
   }
 
   return (
@@ -38,6 +68,11 @@ export default function SignIn(){
       <h1 className="text-2xl font-bold mb-4">Sign in to CineGo</h1>
       <form onSubmit={onSubmit} className="space-y-4 bg-white/5 border border-white/10 rounded-xl p-5">
         {error && <div className="text-red-400 text-sm">{error}</div>}
+        {errors && Array.isArray(errors) && (
+          <ul className="text-red-300 text-sm list-disc pl-5 space-y-1">
+            {errors.map((e,i)=> <li key={i}>{e.msg}</li>)}
+          </ul>
+        )}
         <div>
           <label className="block text-sm mb-1">Sign in as</label>
           <div className="grid grid-cols-3 gap-2 text-sm">

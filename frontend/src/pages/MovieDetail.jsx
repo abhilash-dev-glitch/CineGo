@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { MoviesAPI, ReviewsAPI } from '../lib/api'
-import { useAuth } from '../store/auth'
+import { useSelector } from 'react-redux'
 import { toast } from '../lib/toast'
 
 export default function MovieDetail(){
   const { id } = useParams()
   const [movie, setMovie] = useState(null)
-  const { user } = useAuth()
+  const user = useSelector((state) => state.auth.user)
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -60,7 +60,7 @@ export default function MovieDetail(){
           </div>
           <p className="mt-3 text-white/70">{movie.description}</p>
           <div className="mt-6">
-            <Link to={`/movie/${movieId}/showtimes`} className="px-5 py-3 rounded-lg bg-brand hover:bg-brand-dark transition text-white shadow-soft">Book tickets</Link>
+            <Link to={`/movies/${movieId}/showtimes`} className="px-5 py-3 rounded-lg bg-brand hover:bg-brand-dark transition text-white shadow-soft">Book tickets</Link>
           </div>
         </div>
       </div>

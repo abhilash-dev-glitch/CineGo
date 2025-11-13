@@ -1,28 +1,43 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../store/auth'
-import { toast } from '../lib/toast'
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { register, clearError } from '../store/authSlice';
+import { toast } from '../lib/toast';
 
 export default function SignUp(){
   const navigate = useNavigate()
-  const register = useAuth(s => s.register)
-  const error = useAuth(s => s.error)
-  const errors = useAuth(s => s.errors)
-  const loading = useAuth(s => s.loading)
+  
+  const dispatch = useDispatch();
+  const { user, loading, error, errors } = useSelector((state) => ({
+    user: state.auth.user,
+    loading: state.auth.loading,
+    error: state.auth.error,
+    errors: state.auth.errors
+  }));
+
   const [form, setForm] = useState({ name:'', email:'', phone:'', password:'', role:'endUser' })
 
   const onSubmit = async (e) => {
-    e.preventDefault()
-    const user = await register(form)
-    if (!user) { 
-      toast.error('Registration failed', error || 'Please fix the errors and try again.')
-      return 
+    e.preventDefault();
+    const resultAction = await dispatch(register(form));
+    
+    if (register.fulfilled.match(resultAction)) {
+      const user = resultAction.payload;
+      toast.success('Account created', `Welcome ${user.name}`);
+      navigate('/');
+    } else {
+      toast.error('Registration failed', error || 'Please fix the errors and try again.');
     }
-    toast.success('Account created', `Welcome ${user.name}`)
-    navigate('/')
   }
 
-  const set = (k,v) => setForm(prev => ({ ...prev, [k]: v }))
+  const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+  
+  // Clear errors when component unmounts
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
 
   return (
     <div className="max-w-md mx-auto px-4 py-10">

@@ -1,17 +1,22 @@
 import { Link, useLocation, NavLink } from 'react-router-dom';
 import { useState } from 'react';
-import { useAuth } from '../store/auth.js'; // Corrected import path
+import { useDispatch, useSelector } from 'react-redux';
+import { logout } from '../store/authSlice';
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const dispatch = useDispatch();
+  const user = useSelector((state) => state.auth.user);
+  
+  const handleLogout = () => {
+    dispatch(logout());
+  };
+
   const location = useLocation();
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [currentLocation, setCurrentLocation] = useState('Mumbai');
   
-  // Check if the user is admin
   const isAdmin = user?.role === 'admin';
 
-  // Navigation items - hide for admin users
   const navItems = isAdmin 
     ? [] 
     : [
@@ -23,7 +28,6 @@ export default function Navbar() {
         { to: '/activities', label: 'Activities' },
       ];
 
-  // Available locations
   const locations = [
     'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai',
     'Kolkata', 'Pune', 'Ahmedabad', 'Jaipur', 'Kochi'
@@ -36,7 +40,7 @@ export default function Navbar() {
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
             <Link 
-              to={isAdmin ? '/admin' : '/'} // Point admin logo to admin dashboard
+              to={isAdmin ? '/admin' : '/'} 
               className="flex items-center space-x-2 group transition-all duration-200"
             >
               <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-gradient-to-br from-brand to-brand-dark text-white transform group-hover:rotate-12 transition-transform duration-300">
@@ -330,7 +334,7 @@ export default function Navbar() {
                         </div>
                         <div className="px-1.5 py-1 border-t border-white/5">
                           <button
-                            onClick={logout}
+                            onClick={handleLogout}
                             className="w-full flex items-center px-3 py-2 text-sm rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors duration-150 group"
                           >
                             <svg

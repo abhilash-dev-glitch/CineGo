@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../store/auth';
+import { useSelector } from 'react-redux';
 
 export default function AuthRedirect({ to = '/' }) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  // CORRECTED: Select ONLY the user state slice
+  const user = useSelector((state) => state.auth.user);
 
   useEffect(() => {
     if (user) {
