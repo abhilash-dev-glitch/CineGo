@@ -1,690 +1,423 @@
 import { useState, useEffect } from 'react';
-import { api } from '../../lib/api';
+import { adminService } from '../../services/adminService'; // Corrected
+import { toast } from '../../lib/toast'; // Corrected
+import {
+  FiPlus,
+  FiEdit,
+  FiTrash2,
+  FiLoader,
+  FiAlertCircle,
+  FiX,
+  FiVideo,
+  FiDollarSign,
+  FiCalendar,
+  FiClock,
+  FiCheckCircle,
+  FiXCircle,
+  FiFilm,
+  FiHome,
+  FiGrid
+} from 'react-icons/fi';
 
-const Shows = () => {
-  const [shows, setShows] = useState([]);
-  const [movies, setMovies] = useState([]);
-  const [theaters, setTheaters] = useState([]);
-  const [screens, setScreens] = useState([]);
-  const [loading, setLoading] = useState({
-    shows: false,
-    movies: false,
-    theaters: false,
-    screens: false
-  });
-  
-  const [formData, setFormData] = useState({
-    movie: '',
-    theater: '',
-    screen: '',
-    date: '',
-    startTime: '',
-    endTime: '',
-    price: 0,
-    type: '2D',
-    status: 'scheduled',
-    availableSeats: 0,
-    totalSeats: 0,
-  });
-  
-  const [editingId, setEditingId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({
-    movie: '',
-    theater: '',
-    date: '',
-    status: 'all',
-    type: 'all',
-  });
-
-  // Fetch all necessary data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(prev => ({ ...prev, shows: true, movies: true, theaters: true }));
-        
-        const [showsRes, moviesRes, theatersRes] = await Promise.all([
-          api.get('/shows'),
-          api.get('/movies'),
-          api.get('/theaters')
-        ]);
-        
-        setShows(showsRes.data);
-        setMovies(moviesRes.data);
-        setTheaters(theatersRes.data);
-        
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(prev => ({ ...prev, shows: false, movies: false, theaters: false }));
-      }
-    };
-    
-    fetchData();
-  }, []);
-
-  // Fetch screens when theater is selected
-  useEffect(() => {
-    const fetchScreens = async () => {
-      if (formData.theater) {
-        try {
-          setLoading(prev => ({ ...prev, screens: true }));
-          const response = await api.get(`/theaters/${formData.theater}/screens`);
-          setScreens(response.data);
-        } catch (error) {
-          console.error('Error fetching screens:', error);
-        } finally {
-          setLoading(prev => ({ ...prev, screens: false }));
-        }
-      } else {
-        setScreens([]);
-      }
-    };
-    
-    fetchScreens();
-  }, [formData.theater]);
-
-  // Calculate end time based on movie duration and start time
-  useEffect(() => {
-    if (formData.movie && formData.startTime) {
-      const selectedMovie = movies.find(m => m._id === formData.movie);
-      if (selectedMovie) {
-        const [hours, minutes] = formData.startTime.split(':');
-        const startDate = new Date();
-        startDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-        
-        const endDate = new Date(startDate.getTime() + selectedMovie.duration * 60000);
-        const endTime = endDate.toTimeString().slice(0, 5);
-        
-        setFormData(prev => ({
-          ...prev,
-          endTime,
-          availableSeats: prev.availableSeats || 0,
-          totalSeats: prev.totalSeats || 0
-        }));
-      }
-    }
-  }, [formData.movie, formData.startTime, movies]);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleScreenChange = (e) => {
-    const screenId = e.target.value;
-    const selectedScreen = screens.find(s => s._id === screenId);
-    
-    setFormData(prev => ({
-      ...prev,
-      screen: screenId,
-      totalSeats: selectedScreen?.seats?.length || 0,
-      availableSeats: selectedScreen?.seats?.length || 0
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      const showData = {
-        ...formData,
-        price: parseFloat(formData.price),
-        availableSeats: parseInt(formData.availableSeats, 10),
-        totalSeats: parseInt(formData.totalSeats, 10),
-      };
-      
-      if (editingId) {
-        await api.put(`/shows/${editingId}`, showData);
-      } else {
-        await api.post('/shows', showData);
-      }
-      
-      // Refresh shows data
-      const { data } = await api.get('/shows');
-      setShows(data);
-      
-      // Reset form
-      resetForm();
-      
-    } catch (error) {
-      console.error('Error saving show:', error);
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      movie: '',
-      theater: '',
-      screen: '',
-      date: '',
-      startTime: '',
-      endTime: '',
-      price: 0,
-      type: '2D',
-      status: 'scheduled',
-      availableSeats: 0,
-      totalSeats: 0,
-    });
-    setEditingId(null);
-  };
-
-  const handleEdit = (show) => {
-    setFormData({
-      movie: show.movie?._id || show.movie,
-      theater: show.theater?._id || show.theater,
-      screen: show.screen?._id || show.screen,
-      date: show.date ? new Date(show.date).toISOString().split('T')[0] : '',
-      startTime: show.startTime,
-      endTime: show.endTime,
-      price: show.price,
-      type: show.type || '2D',
-      status: show.status || 'scheduled',
-      availableSeats: show.availableSeats || 0,
-      totalSeats: show.totalSeats || 0,
-    });
-    setEditingId(show._id);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this show? This action cannot be undone.')) {
-      try {
-        await api.delete(`/shows/${id}`);
-        const { data } = await api.get('/shows');
-        setShows(data);
-      } catch (error) {
-        console.error('Error deleting show:', error);
-      }
-    }
-  };
-
-  const toggleStatus = async (id, currentStatus) => {
-    const newStatus = currentStatus === 'active' ? 'cancelled' : 'active';
-    try {
-      await api.patch(`/shows/${id}`, { status: newStatus });
-      const { data } = await api.get('/shows');
-      setShows(data);
-    } catch (error) {
-      console.error('Error updating show status:', error);
-    }
-  };
-
-  // Filter and sort shows
-  const filteredShows = shows.filter(show => {
-    const matchesSearch = 
-      (show.movie?.title?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (show.theater?.name?.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesMovie = !filters.movie || show.movie?._id === filters.movie || show.movie === filters.movie;
-    const matchesTheater = !filters.theater || show.theater?._id === filters.theater || show.theater === filters.theater;
-    const matchesDate = !filters.date || (new Date(show.date).toDateString() === new Date(filters.date).toDateString());
-    const matchesStatus = filters.status === 'all' || show.status === filters.status;
-    const matchesType = filters.type === 'all' || show.type === filters.type;
-    
-    return matchesSearch && matchesMovie && matchesTheater && matchesDate && matchesStatus && matchesType;
-  }).sort((a, b) => {
-    // Sort by date and time
-    const dateA = new Date(`${a.date}T${a.startTime}`);
-    const dateB = new Date(`${b.date}T${b.startTime}`);
-    return dateA - dateB;
-  });
-
-  // Get unique show dates for filter
-  const showDates = [...new Set(shows.map(show => show.date))].sort();
-
+// Modal and FormInput components would be ideal to abstract
+// For brevity, I'll keep the modal logic inline or simplified
+const Modal = ({ isOpen, onClose, title, children }) => {
+  if (!isOpen) return null;
   return (
-    <div className="space-y-6">
-      <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">
-          {editingId ? 'Edit Show' : 'Add New Show'}
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Movie Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Movie</label>
-              <select
-                name="movie"
-                value={formData.movie}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                required
-                disabled={loading.movies}
-              >
-                <option value="">Select a movie</option>
-                {movies.map(movie => (
-                  <option key={movie._id} value={movie._id}>
-                    {movie.title} ({movie.duration} mins)
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Theater Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Theater</label>
-              <select
-                name="theater"
-                value={formData.theater}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                required
-                disabled={loading.theaters}
-              >
-                <option value="">Select a theater</option>
-                {theaters.map(theater => (
-                  <option key={theater._id} value={theater._id}>
-                    {theater.name}, {theater.city}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Screen Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Screen</label>
-              <select
-                name="screen"
-                value={formData.screen}
-                onChange={handleScreenChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                required
-                disabled={!formData.theater || loading.screens}
-              >
-                <option value="">Select a screen</option>
-                {screens.map(screen => (
-                  <option key={screen._id} value={screen._id}>
-                    {screen.name} ({screen.seats?.length || 0} seats)
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Show Date */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Date</label>
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleInputChange}
-                min={new Date().toISOString().split('T')[0]}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                required
-              />
-            </div>
-
-            {/* Start Time */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Start Time</label>
-              <input
-                type="time"
-                name="startTime"
-                value={formData.startTime}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                required
-              />
-            </div>
-
-            {/* End Time (read-only) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">End Time</label>
-              <input
-                type="time"
-                name="endTime"
-                value={formData.endTime}
-                readOnly
-                className="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              />
-            </div>
-
-            {/* Price */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Price (₹)</label>
-              <input
-                type="number"
-                name="price"
-                min="0"
-                step="0.01"
-                value={formData.price}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                required
-              />
-            </div>
-
-            {/* Show Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Type</label>
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              >
-                <option value="2D">2D</option>
-                <option value="3D">3D</option>
-                <option value="IMAX">IMAX</option>
-                <option value="4DX">4DX</option>
-              </select>
-            </div>
-
-            {/* Status */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Status</label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              >
-                <option value="scheduled">Scheduled</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
-
-            {/* Seats Info */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Total Seats</label>
-              <input
-                type="number"
-                name="totalSeats"
-                min="1"
-                value={formData.totalSeats}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                required
-                disabled
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Available Seats</label>
-              <input
-                type="number"
-                name="availableSeats"
-                min="0"
-                max={formData.totalSeats}
-                value={formData.availableSeats}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-3 pt-4">
-            {editingId && (
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Cancel
-              </button>
-            )}
-            <button
-              type="submit"
-              className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              disabled={loading.shows}
-            >
-              {loading.shows ? 'Saving...' : (editingId ? 'Update Show' : 'Add Show')}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-            <h2 className="text-xl font-semibold">Manage Shows</h2>
-            <div className="mt-4 md:mt-0 flex space-x-2">
-              <input
-                type="text"
-                placeholder="Search shows..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full md:w-64 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              />
-            </div>
-          </div>
-          
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Movie Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Movie</label>
-              <select
-                value={filters.movie}
-                onChange={(e) => setFilters({...filters, movie: e.target.value})}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              >
-                <option value="">All Movies</option>
-                {movies.map(movie => (
-                  <option key={movie._id} value={movie._id}>
-                    {movie.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Theater Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Theater</label>
-              <select
-                value={filters.theater}
-                onChange={(e) => setFilters({...filters, theater: e.target.value})}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              >
-                <option value="">All Theaters</option>
-                {theaters.map(theater => (
-                  <option key={theater._id} value={theater._id}>
-                    {theater.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Date Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Date</label>
-              <select
-                value={filters.date}
-                onChange={(e) => setFilters({...filters, date: e.target.value})}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              >
-                <option value="">All Dates</option>
-                {showDates.map(date => (
-                  <option key={date} value={date}>
-                    {new Date(date).toLocaleDateString()}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Status Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Status</label>
-              <select
-                value={filters.status}
-                onChange={(e) => setFilters({...filters, status: e.target.value})}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              >
-                <option value="all">All Status</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
-            
-            {/* Type Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Type</label>
-              <select
-                value={filters.type}
-                onChange={(e) => setFilters({...filters, type: e.target.value})}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              >
-                <option value="all">All Types</option>
-                <option value="2D">2D</option>
-                <option value="3D">3D</option>
-                <option value="IMAX">IMAX</option>
-                <option value="4DX">4DX</option>
-              </select>
-            </div>
-          </div>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+      <div className="bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl border border-gray-700 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-gray-700">
+          <h3 className="text-xl font-semibold text-white">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white hover:bg-gray-700 rounded-full p-2 transition-colors">
+            <FiX size={20} />
+          </button>
         </div>
-        
-        {loading.shows ? (
-          <div className="p-6 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Loading shows...</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Movie
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Theater & Screen
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date & Time
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Seats
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredShows.length > 0 ? (
-                  filteredShows.map((show) => {
-                    const showDate = new Date(show.date);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    
-                    const isPastShow = showDate < today || 
-                                     (showDate.toDateString() === today.toDateString() && 
-                                      new Date(`${show.date}T${show.endTime}`) < new Date());
-                    
-                    return (
-                      <tr 
-                        key={show._id} 
-                        className={`${isPastShow ? 'bg-gray-50' : 'hover:bg-gray-50'}`}
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {show.movie?.title || 'N/A'}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {show.movie?.duration} mins
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">
-                            {show.theater?.name || 'N/A'}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {show.screen?.name || 'Screen N/A'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {showDate.toLocaleDateString()}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {show.startTime} - {show.endTime}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            show.type === '2D' ? 'bg-blue-100 text-blue-800' :
-                            show.type === '3D' ? 'bg-purple-100 text-purple-800' :
-                            show.type === 'IMAX' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-indigo-100 text-indigo-800'
-                          }`}>
-                            {show.type}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <div className="text-gray-900">
-                            {show.availableSeats} / {show.totalSeats}
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-indigo-600 h-2 rounded-full" 
-                              style={{
-                                width: `${(show.availableSeats / show.totalSeats) * 100}%`,
-                                backgroundColor: (show.availableSeats / show.totalSeats) < 0.2 ? '#DC2626' : '#4F46E5'
-                              }}
-                            ></div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span 
-                            onClick={() => !isPastShow && toggleStatus(show._id, show.status === 'active')}
-                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer ${
-                              show.status === 'cancelled' ? 'bg-red-100 text-red-800 hover:bg-red-200' :
-                              show.status === 'completed' ? 'bg-gray-100 text-gray-800' :
-                              isPastShow ? 'bg-gray-100 text-gray-800' :
-                              'bg-green-100 text-green-800 hover:bg-green-200'
-                            }`}
-                          >
-                            {isPastShow ? 'Completed' : show.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          {!isPastShow && (
-                            <>
-                              <button
-                                onClick={() => handleEdit(show)}
-                                className="text-indigo-600 hover:text-indigo-900 mr-3"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDelete(show._id)}
-                                className="text-red-600 hover:text-red-900"
-                              >
-                                Delete
-                              </button>
-                            </>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan="7" className="px-6 py-4 text-center text-sm text-gray-500">
-                      No shows found. {searchTerm ? 'Try a different search term.' : 'Add a new show to get started.'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="p-6 max-h-[70vh] overflow-y-auto">{children}</div>
       </div>
     </div>
   );
 };
 
-export default Shows;
+const FormInput = ({ label, name, value, onChange, type = 'text', required = false, as = 'input', children }) => {
+  const commonProps = {
+    name,
+    id: name,
+    value: value || '',
+    onChange,
+    required,
+    className: 'w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-transparent transition-all duration-200',
+  };
+  return (
+    <div>
+      <label htmlFor={name} className="block text-sm font-medium text-gray-300 mb-1.5">{label}</label>
+      {as === 'select' ? (
+        <select {...commonProps}>{children}</select>
+      ) : (
+        <input {...commonProps} type={type} />
+      )}
+    </div>
+  );
+};
+
+export default function AdminShows() {
+  const [showtimes, setShowtimes] = useState([]);
+  const [movies, setMovies] = useState([]);
+  const [theaters, setTheaters] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentShow, setCurrentShow] = useState(null);
+
+  const [availableScreens, setAvailableScreens] = useState([]);
+
+  // Helper function to extract data from API response
+  const extractData = (response, key) => {
+    if (!response || !response.data) return [];
+    
+    // If response.data is an array, return it
+    if (Array.isArray(response.data)) {
+      return response.data;
+    } 
+    // If response.data has the key, return that
+    else if (response.data[key]) {
+      return response.data[key];
+    }
+    // If response.data has a data property with the key
+    else if (response.data.data && response.data.data[key]) {
+      return response.data.data[key];
+    }
+    
+    console.log('Unexpected API response structure for key', key, ':', response);
+    return [];
+  };
+
+  // Fetch all necessary data
+  const fetchAllData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch all data in parallel
+      const [showsResponse, moviesResponse, theatersResponse] = await Promise.all([
+        adminService.getShowtimes(),
+        adminService.getMovies(),
+        adminService.getTheaters(),
+      ]);
+      
+      // Extract and set data based on response structure
+      setShowtimes(extractData(showsResponse, 'showtimes'));
+      setMovies(extractData(moviesResponse, 'movies'));
+      setTheaters(extractData(theatersResponse, 'theaters'));
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('Failed to load show data.');
+      toast.error('Failed to load data', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  // Update available screens when theater selection changes in the form
+  useEffect(() => {
+    if (currentShow?.theater) {
+      const selectedTheater = theaters.find(t => t._id === currentShow.theater);
+      setAvailableScreens(selectedTheater?.screens || []);
+    } else {
+      setAvailableScreens([]);
+    }
+  }, [currentShow?.theater, theaters]);
+  
+  // Calculate end time when start time or movie duration changes
+  useEffect(() => {
+    if (currentShow?.movie && currentShow?.startTime && currentShow?.date) {
+      const selectedMovie = movies.find(m => m._id === currentShow.movie);
+      if (selectedMovie) {
+        const startDateTime = new Date(`${currentShow.date}T${currentShow.startTime}`);
+        const endDateTime = new Date(startDateTime.getTime() + selectedMovie.duration * 60000);
+        
+        const endTime = endDateTime.toTimeString().slice(0, 5); // Format as HH:MM
+        setCurrentShow(prev => ({ ...prev, endTime }));
+      }
+    }
+  }, [currentShow?.movie, currentShow?.startTime, currentShow?.date, movies]);
+
+  // --- Handlers ---
+  
+  const handleOpenModal = (show = null) => {
+    if (show) {
+      const startTime = new Date(show.startTime);
+      setCurrentShow({
+        ...show,
+        movie: show.movie?._id,
+        theater: show.theater?._id,
+        date: startTime.toISOString().split('T')[0],
+        startTime: startTime.toTimeString().slice(0, 5),
+      });
+    } else {
+      setCurrentShow({
+        price: 150, // Default price
+        isActive: true,
+      });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setCurrentShow(null);
+    setAvailableScreens([]);
+  };
+
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setCurrentShow((prev) => ({ ...prev, [name]: value }));
+  };
+  
+  const handleScreenChange = (e) => {
+     const screenName = e.target.value;
+     const selectedScreen = availableScreens.find(s => s.name === screenName);
+     setCurrentShow(prev => ({
+       ...prev,
+       screen: screenName,
+       availableSeats: selectedScreen?.capacity || 0,
+       totalSeats: selectedScreen?.capacity || 0,
+     }));
+  };
+
+  const handleDelete = async (showId) => {
+    if (window.confirm('Are you sure you want to delete this show? This will also delete all associated bookings.')) {
+      try {
+        await adminService.deleteShowtime(showId);
+        toast.success('Show deleted successfully');
+        fetchAllData(); // Refresh list
+      } catch (err) {
+        console.error('Error deleting show:', err);
+        toast.error('Failed to delete show', err.message);
+      }
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!currentShow) return;
+
+    // Combine date and time into a full ISO string for start and end
+    const startDateTime = new Date(`${currentShow.date}T${currentShow.startTime}`);
+    const endDateTime = new Date(`${currentShow.date}T${currentShow.endTime}`);
+
+    const showData = {
+      ...currentShow,
+      startTime: startDateTime.toISOString(),
+      endTime: endDateTime.toISOString(),
+      price: Number(currentShow.price),
+      availableSeats: Number(currentShow.availableSeats),
+      totalSeats: Number(currentShow.totalSeats),
+    };
+    
+    // Remove date field as it's merged into startTime/endTime
+    delete showData.date; 
+
+    try {
+      if (currentShow._id) {
+        await adminService.updateShowtime(currentShow._id, showData);
+        toast.success('Show updated successfully');
+      } else {
+        await adminService.createShowtime(showData);
+        toast.success('Show created successfully');
+      }
+      handleCloseModal();
+      fetchAllData(); // Refresh the list
+    } catch (err) {
+      console.error('Error saving show:', err);
+      toast.error('Failed to save show', err.response?.data?.message || err.message);
+    }
+  };
+  
+  // --- Render Functions ---
+  
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="flex justify-center items-center py-20">
+          <FiLoader className="animate-spin text-brand text-4xl" />
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 bg-red-900/20 border border-red-700 rounded-lg text-red-300">
+          <FiAlertCircle className="text-4xl mb-2" />
+          <p>{error}</p>
+          <button
+            onClick={fetchAllData}
+            className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+
+    if (showtimes.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 bg-gray-900/30 border-2 border-dashed border-gray-700 rounded-lg text-gray-500">
+          <FiVideo className="text-5xl mb-3" />
+          <h3 className="text-xl font-semibold text-gray-300">No Shows Found</h3>
+          <p className="mt-1">Get started by adding a new show.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-700">
+            <thead className="bg-gray-800">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Movie</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Theater & Screen</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Time & Date</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Seats</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Price</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody className="bg-gray-800/50 divide-y divide-gray-700">
+              {showtimes.map((show) => (
+                <tr key={show._id} className="hover:bg-gray-700/50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <img className="h-16 w-12 rounded-md object-cover border border-gray-700" src={show.movie?.poster || 'https://placehold.co/128x176/1f2937/9ca3af?text=N/A'} alt={show.movie?.title} />
+                      <div className="ml-3">
+                        <div className="text-sm font-medium text-white">{show.movie?.title}</div>
+                        <div className="text-xs text-gray-400">{show.movie?.language}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-white">{show.theater?.name}</div>
+                    <div className="text-sm text-gray-400">{show.screen}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-white">{new Date(show.startTime).toLocaleDateString()}</div>
+                    <div className="text-sm text-gray-400">
+                      {new Date(show.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(show.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </td>
+                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                    {show.availableSeats} / {show.totalSeats || show.availableSeats}
+                  </td>
+                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                    ₹{show.price}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${show.isActive ? 'bg-green-900/50 text-green-300 border border-green-700' : 'bg-gray-900/50 text-gray-400 border border-gray-700'}`}>
+                      {show.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                    <button onClick={() => handleOpenModal(show)} className="text-indigo-400 hover:text-indigo-300 transition-colors p-1" title="Edit Show">
+                      <FiEdit size={18} />
+                    </button>
+                    <button onClick={() => handleDelete(show._id)} className="text-red-500 hover:text-red-400 transition-colors p-1" title="Delete Show">
+                      <FiTrash2 size={18} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="text-white">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Show Management</h1>
+        <button onClick={() => handleOpenModal()} className="flex items-center px-4 py-2.5 bg-brand hover:bg-brand-dark text-white font-medium rounded-lg shadow-lg hover:shadow-brand/30 transition-all duration-200">
+          <FiPlus className="w-5 h-5 mr-2" />
+          Add New Show
+        </button>
+      </div>
+
+      {renderContent()}
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        title={currentShow?._id ? 'Edit Show' : 'Add New Show'}
+      >
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <FormInput label="Movie" name="movie" as="select" value={currentShow?.movie} onChange={handleFormChange} required>
+              <option value="">Select a movie</option>
+              {movies.map(movie => (
+                <option key={movie._id} value={movie._id}>{movie.title}</option>
+              ))}
+            </FormInput>
+            
+            <FormInput label="Theater" name="theater" as="select" value={currentShow?.theater} onChange={handleFormChange} required>
+              <option value="">Select a theater</option>
+              {theaters.map(theater => (
+                <option key={theater._id} value={theater._id}>{theater.name} ({theater.city})</option>
+              ))}
+            </FormInput>
+          </div>
+
+          <FormInput label="Screen" name="screen" as="select" value={currentShow?.screen} onChange={handleScreenChange} required>
+            <option value="">Select a screen</option>
+            {availableScreens.map(screen => (
+              <option key={screen._id || screen.name} value={screen.name}>{screen.name} ({screen.capacity} seats)</option>
+            ))}
+          </FormInput>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <FormInput label="Date" name="date" type="date" value={currentShow?.date} onChange={handleFormChange} required />
+            <FormInput label="Start Time" name="startTime" type="time" value={currentShow?.startTime} onChange={handleFormChange} required />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+             <FormInput label="End Time (auto-calculated)" name="endTime" type="time" value={currentShow?.endTime} onChange={handleFormChange} required />
+             <FormInput label="Price (INR)" name="price" type="number" value={currentShow?.price} onChange={handleFormChange} required />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+             <FormInput label="Available Seats" name="availableSeats" type="number" value={currentShow?.availableSeats} onChange={handleFormChange} required />
+             <FormInput label="Total Seats" name="totalSeats" type="number" value={currentShow?.totalSeats} onChange={handleFormChange} required />
+          </div>
+
+          <div className="flex items-center pt-4">
+            <input
+              type="checkbox"
+              name="isActive"
+              id="isActive"
+              checked={currentShow?.isActive || false}
+              onChange={(e) => setCurrentShow(prev => ({ ...prev, isActive: e.target.checked }))}
+              className="h-4 w-4 text-brand bg-gray-900 border-gray-700 rounded focus:ring-brand"
+            />
+            <label htmlFor="isActive" className="ml-2 text-sm text-gray-300">
+              Is this show active for booking?
+            </label>
+          </div>
+          
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">
+            <button type="button" onClick={handleCloseModal} className="px-5 py-2.5 rounded-lg text-sm font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 transition-colors">
+              Cancel
+            </button>
+            <button type="submit" className="px-5 py-2.5 rounded-lg text-sm font-medium text-white bg-brand hover:bg-brand-dark transition-colors">
+              {currentShow?._id ? 'Update Show' : 'Create Show'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  );
+}

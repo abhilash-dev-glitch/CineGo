@@ -57,9 +57,11 @@ const movies = [
       'Tom Hardy',
     ],
     language: 'English',
-    rating: 8.8,
-    poster: 'https://example.com/inception-poster.jpg',
-    trailer: 'https://example.com/inception-trailer.mp4',
+    ratingsAverage: 8.8,
+    ratingsCount: 1500,
+    poster: 'https://placehold.co/400x600/1f2937/9ca3af?text=Inception',
+    trailer: 'https://www.youtube.com/watch?v=YoHD9XEInc0',
+    isActive: true,
   },
   {
     title: 'The Dark Knight',
@@ -71,9 +73,11 @@ const movies = [
     director: 'Christopher Nolan',
     cast: ['Christian Bale', 'Heath Ledger', 'Aaron Eckhart', 'Michael Caine'],
     language: 'English',
-    rating: 9.0,
-    poster: 'https://example.com/dark-knight-poster.jpg',
-    trailer: 'https://example.com/dark-knight-trailer.mp4',
+    ratingsAverage: 9.0,
+    ratingsCount: 2000,
+    poster: 'https://placehold.co/400x600/1f2937/9ca3af?text=The+Dark+Knight',
+    trailer: 'https://www.youtube.com/watch?v=EXeTwQWrcwY',
+    isActive: true,
   },
   {
     title: 'Interstellar',
@@ -90,9 +94,11 @@ const movies = [
       'Michael Caine',
     ],
     language: 'English',
-    rating: 8.6,
-    poster: 'https://example.com/interstellar-poster.jpg',
-    trailer: 'https://example.com/interstellar-trailer.mp4',
+    ratingsAverage: 8.6,
+    ratingsCount: 1200,
+    poster: 'https://placehold.co/400x600/1f2937/9ca3af?text=Interstellar',
+    trailer: 'https://www.youtube.com/watch?v=zSWdZVtXT7E',
+    isActive: true,
   },
 ];
 
@@ -110,12 +116,12 @@ const theaters = [
       {
         name: 'Screen 1',
         capacity: 150,
-        seatLayout: [[15, 15, 15, 15, 15, 15, 15, 15, 15, 15]],
+        seatLayout: Array(10).fill(Array(15).fill(1)), // 10 rows, 15 seats
       },
       {
         name: 'Screen 2',
         capacity: 200,
-        seatLayout: [[20, 20, 20, 20, 20, 20, 20, 20, 20, 20]],
+        seatLayout: Array(10).fill(Array(20).fill(1)), // 10 rows, 20 seats
       },
     ],
     facilities: ['Parking', 'Food Court', '3D', 'IMAX'],
@@ -137,17 +143,18 @@ const theaters = [
       {
         name: 'Screen 1',
         capacity: 120,
-        seatLayout: [[12, 12, 12, 12, 12, 12, 12, 12, 12, 12]],
+        seatLayout: Array(10).fill(Array(12).fill(1)), // 10 rows, 12 seats
       },
       {
         name: 'Screen 2',
         capacity: 180,
-        seatLayout: [[18, 18, 18, 18, 18, 18, 18, 18, 18, 18]],
+         // *** THIS IS THE FIX: 's' is replaced with '1' ***
+        seatLayout: Array(10).fill(Array(18).fill(1)), // 10 rows, 18 seats
       },
       {
         name: 'Screen 3',
         capacity: 100,
-        seatLayout: [[10, 10, 10, 10, 10, 10, 10, 10, 10, 10]],
+        seatLayout: Array(10).fill(Array(10).fill(1)), // 10 rows, 10 seats
       },
     ],
     facilities: ['Parking', 'Food Court', '3D', 'Dolby Atmos'],
@@ -163,24 +170,36 @@ const importData = async () => {
   try {
     console.log('Importing data...');
 
-    // Clear existing data
+    // Clear existing data (except for movies)
+    // We only clear data that is fully replaced by the seeder
     await User.deleteMany();
-    await Movie.deleteMany();
     await Theater.deleteMany();
     await Showtime.deleteMany();
     await Booking.deleteMany();
+    console.log('Cleared Users, Theaters, Showtimes, and Bookings.');
 
     // Import users
     const createdUsers = await User.create(users);
     console.log('Users imported successfully');
 
-    // Import movies
-    const createdMovies = await Movie.create(movies);
-    console.log('Movies imported successfully');
-
     // Import theaters
     const createdTheaters = await Theater.create(theaters);
     console.log('Theaters imported successfully');
+    
+    // --- MOVIE LOGIC ---
+    // Add or update sample movies without deleting existing ones
+    console.log('Upserting sample movies...');
+    const createdMovies = [];
+    for (const movieData of movies) {
+      const movie = await Movie.findOneAndUpdate(
+        { title: movieData.title }, // Find by unique title
+        movieData,                 // Data to insert/update
+        { upsert: true, new: true, runValidators: true } // Options
+      );
+      createdMovies.push(movie);
+    }
+    console.log('Sample movies upserted successfully');
+    // --- END MOVIE LOGIC ---
 
     // Assign first theater to theater manager
     const theaterManager = createdUsers.find(user => user.role === 'theaterManager');
@@ -194,13 +213,14 @@ const importData = async () => {
     const today = new Date();
     const showtimes = [];
 
+    // Only create showtimes for the movies we just added/updated
     createdMovies.forEach((movie, index) => {
       createdTheaters.forEach((theater) => {
         theater.screens.forEach((screen, screenIndex) => {
           // Create 3 showtimes per screen
           for (let i = 0; i < 3; i++) {
             const startTime = new Date(today);
-            startTime.setDate(today.getDate() + i);
+            startTime.setDate(today.getDate() + i); // Showings for today, tomorrow, day after
             startTime.setHours(10 + screenIndex * 3 + i * 2, 0, 0, 0);
 
             const endTime = new Date(startTime);
@@ -212,8 +232,9 @@ const importData = async () => {
               screen: screen.name,
               startTime,
               endTime,
-              price: 10 + index * 2,
+              price: 150 + index * 20, // Base price 150, 170, 190
               availableSeats: screen.capacity,
+              totalSeats: screen.capacity, 
             });
           }
         });
@@ -223,7 +244,7 @@ const importData = async () => {
     await Showtime.create(showtimes);
     console.log('Showtimes imported successfully');
 
-    console.log('\n✅ Data imported successfully!');
+    console.log('\n✅ Data imported/updated successfully!');
     console.log('\nSample credentials:');
     console.log('Admin - Email: admin@example.com, Password: admin123456');
     console.log('End User - Email: john@example.com, Password: password123');
@@ -240,7 +261,7 @@ const importData = async () => {
 const deleteData = async () => {
   try {
     console.log('Deleting data...');
-
+    // Keep Movie.deleteMany() here so you can still clear your DB if you want
     await User.deleteMany();
     await Movie.deleteMany();
     await Theater.deleteMany();

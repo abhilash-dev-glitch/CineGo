@@ -16,7 +16,20 @@ exports.getAllMovies = async (req, res, next) => {
       .limitFields()
       .paginate();
 
-    const movies = await features.query;
+    // Populate showtimes to get insights for the admin panel
+    const movies = await features.query.populate({
+      path: 'showtimes',
+      match: { startTime: { $gte: new Date() } }, // Only get active/upcoming showtimes
+      populate: [
+        {
+          path: 'theater',
+          select: 'name', // We only need the theater's name for the insight
+        },
+        {
+          path: 'bookingCount', // Populate the virtual bookingCount
+        }
+      ],
+    });
 
     res.status(200).json({
       status: 'success',
@@ -35,7 +48,22 @@ exports.getAllMovies = async (req, res, next) => {
 // @access  Public
 exports.getMovie = async (req, res, next) => {
   try {
-    const movie = await Movie.findById(req.params.id);
+    // Populate reviews and active showtimes for the detail page
+    const movie = await Movie.findById(req.params.id)
+      .populate('reviews')
+      .populate({
+        path: 'showtimes',
+        match: { startTime: { $gte: new Date() } },
+        populate: [
+          {
+            path: 'theater',
+            select: 'name location.city',
+          },
+          {
+            path: 'bookingCount', // Also populate booking count for detail view
+          }
+        ],
+      });
 
     if (!movie) {
       return next(new AppError('No movie found with that ID', 404));
@@ -100,11 +128,27 @@ exports.updateMovie = async (req, res, next) => {
 // @access  Private/Admin
 exports.deleteMovie = async (req, res, next) => {
   try {
-    const movie = await Movie.findByIdAndDelete(req.params.id);
+    const movie = await Movie.findById(req.params.id);
 
     if (!movie) {
       return next(new AppError('No movie found with that ID', 404));
     }
+
+    // Delete associated poster from Cloudinary first
+    if (movie.posterPublicId) {
+      try {
+        await deleteFromCloudinary(movie.posterPublicId);
+      } catch (error) {
+        console.error('Error deleting poster during movie delete:', error);
+        // Don't block movie deletion if poster delete fails
+      }
+    }
+
+    // Delete showtimes associated with the movie
+    await Showtime.deleteMany({ movie: req.params.id });
+
+    // Now delete the movie
+    await Movie.findByIdAndDelete(req.params.id);
 
     res.status(204).json({
       status: 'success',
@@ -114,6 +158,7 @@ exports.deleteMovie = async (req, res, next) => {
     next(error);
   }
 };
+
 
 // @desc    Get movie showtimes
 // @route   GET /api/v1/movies/:id/showtimes
@@ -190,6 +235,8 @@ exports.uploadMoviePoster = async (req, res, next) => {
       message: 'Movie poster uploaded successfully',
       data: {
         poster: result.url,
+        posterPublicId: result.publicId,
+        movie,
       },
     });
   } catch (error) {
@@ -221,8 +268,8 @@ exports.deleteMoviePoster = async (req, res, next) => {
     }
 
     // Remove from movie document
-    movie.poster = undefined;
-    movie.posterPublicId = undefined;
+    movie.poster = null; // Use null instead of undefined
+    movie.posterPublicId = null; // Use null instead of undefined
     await movie.save();
 
     res.status(200).json({

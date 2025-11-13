@@ -12,6 +12,7 @@ const {
   sendBookingConfirmation,
   sendCancellationNotification,
 } = require('../services/notification.service');
+const { broadcast } = require('../config/websocket'); // Import broadcast
 
 // @desc    Get all bookings (Admin only)
 // @route   GET /api/v1/bookings
@@ -225,6 +226,15 @@ exports.createBooking = async (req, res, next) => {
     // Send booking confirmation notification (async via queue)
     await sendBookingConfirmation(populatedBooking, req.user, { sms: false });
 
+    // Broadcast WebSocket event for new booking (only if it's paid, or for admin)
+    // We'll broadcast on 'paid' status update instead.
+    // For now, let's broadcast on creation for realtime admin view
+    broadcast({
+      type: 'NEW_BOOKING',
+      data: populatedBooking,
+    });
+
+
     res.status(201).json({
       status: 'success',
       data: {
@@ -260,6 +270,7 @@ exports.updatePaymentStatus = async (req, res, next) => {
       );
     }
 
+    const oldStatus = booking.paymentStatus;
     booking.paymentStatus = paymentStatus;
     if (paymentId) {
       booking.paymentId = paymentId;
@@ -284,6 +295,22 @@ exports.updatePaymentStatus = async (req, res, next) => {
         await showtime.save();
       }
     }
+
+    // Broadcast if payment is successful
+    if (paymentStatus === 'paid' && oldStatus !== 'paid') {
+      const populatedBooking = await Booking.findById(booking._id)
+        .populate('user', 'name email')
+        .populate({
+          path: 'showtime',
+          populate: { path: 'movie', select: 'title' },
+        });
+      
+      broadcast({
+        type: 'BOOKING_PAID',
+        data: populatedBooking,
+      });
+    }
+
 
     res.status(200).json({
       status: 'success',
@@ -341,6 +368,7 @@ exports.cancelBooking = async (req, res, next) => {
     }
 
     // Update booking status
+    const oldStatus = booking.paymentStatus;
     booking.paymentStatus = 'cancelled';
     await booking.save();
 
@@ -367,6 +395,14 @@ exports.cancelBooking = async (req, res, next) => {
 
     // Send cancellation notification (async via queue)
     await sendCancellationNotification(populatedBooking, req.user, { sms: false });
+
+    // Broadcast cancellation
+    if (oldStatus === 'paid') {
+      broadcast({
+        type: 'BOOKING_CANCELLED',
+        data: populatedBooking,
+      });
+    }
 
     res.status(200).json({
       status: 'success',

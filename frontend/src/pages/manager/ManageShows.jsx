@@ -1,0 +1,405 @@
+import { useState, useEffect, useMemo } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import { api } from '../../lib/api';
+import { toast } from '../../lib/toast';
+import { FiPlus, FiTrash2, FiClock, FiFilm, FiDollarSign, FiCalendar, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { format, parseISO, isAfter } from 'date-fns';
+
+export default function ManageShows() {
+  const { myTheaters: theaters, movies } = useOutletContext();
+  const [selectedTheaterId, setSelectedTheaterId] = useState('');
+  const [shows, setShows] = useState([]);
+  const [loadingShows, setLoadingShows] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [form, setForm] = useState({
+    movie: '',
+    screen: '',
+    startTime: '',
+    endTime: '',
+    price: 200,
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Get the selected theater and its screens
+  const selectedTheater = useMemo(() => 
+    theaters.find((t) => t._id === selectedTheaterId),
+    [theaters, selectedTheaterId]
+  );
+
+  const availableScreens = selectedTheater?.screens || [];
+  
+  // Group shows by date for better organization
+  const showsByDate = useMemo(() => {
+    const grouped = {};
+    shows.forEach(show => {
+      const date = format(parseISO(show.startTime), 'yyyy-MM-dd');
+      if (!grouped[date]) {
+        grouped[date] = [];
+      }
+      grouped[date].push(show);
+    });
+    return grouped;
+  }, [shows]);
+
+  // Load shows for the selected theater
+  const loadShows = async () => {
+    if (!selectedTheaterId) return;
+    setLoadingShows(true);
+    try {
+      const res = await api.get(`/theaters/${selectedTheaterId}/showtimes`);
+      // Sort shows by start time
+      const sortedShows = (res.data.data.showtimes || []).sort((a, b) => 
+        new Date(a.startTime) - new Date(b.startTime)
+      );
+      setShows(sortedShows);
+    } catch (err) {
+      console.error('Error loading shows:', err);
+      toast.error('Failed to load shows', err.response?.data?.message || 'Please try again later');
+    } finally {
+      setLoadingShows(false);
+    }
+  };
+
+  // Reload shows when the selected theater changes
+  useEffect(() => {
+    loadShows();
+  }, [selectedTheaterId]);
+
+  // Helper function to update form state
+  const set = (key, value) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Update end time when start time changes to ensure it's after start time
+  useEffect(() => {
+    if (form.startTime && form.endTime && new Date(form.endTime) <= new Date(form.startTime)) {
+      // Add 2 hours as default duration
+      const endTime = new Date(new Date(form.startTime).getTime() + 2 * 60 * 60 * 1000);
+      set('endTime', endTime.toISOString().slice(0, 16));
+    }
+  }, [form.startTime]);
+
+  // Reset screen selection when theater changes
+  useEffect(() => {
+    set('screen', '');
+  }, [selectedTheaterId]);
+
+  const create = async (e) => {
+    e.preventDefault();
+    if (!form.movie || !form.screen || !form.startTime || !form.endTime) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    const startTime = new Date(form.startTime);
+    const endTime = new Date(form.endTime);
+    
+    if (endTime <= startTime) {
+      toast.error('End time must be after start time');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const payload = {
+        ...form,
+        theater: selectedTheaterId,
+        price: Number(form.price || 0),
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+      };
+      
+      await api.post('/showtimes', payload);
+      toast.success('Show created successfully!');
+      setForm({ movie: '', screen: '', startTime: '', endTime: '', price: 200 });
+      setIsFormOpen(false);
+      loadShows();
+    } catch (err) {
+      console.error('Error creating show:', err);
+      toast.error('Failed to create show', err.response?.data?.message || 'Please try again');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const remove = async (id) => {
+    if (window.confirm('Are you sure you want to delete this show? This action cannot be undone.')) {
+      try {
+        await api.delete(`/showtimes/${id}`);
+        toast.success('Show deleted successfully');
+        loadShows();
+      } catch (err) {
+        console.error('Error deleting show:', err);
+        toast.error('Failed to delete show', err.response?.data?.message || 'Please try again');
+      }
+    }
+  };
+
+  // Set initial theater if not set and theaters are available
+  useEffect(() => {
+    if (theaters.length > 0 && !selectedTheaterId) {
+      setSelectedTheaterId(theaters[0]._id);
+    }
+  }, [theaters, selectedTheaterId]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold">Manage Shows</h2>
+          <p className="text-sm text-white/60">
+            {selectedTheater 
+              ? `Managing shows for ${selectedTheater.name}` 
+              : 'Select a theater to manage shows'}
+          </p>
+        </div>
+        <button
+          onClick={() => setIsFormOpen(!isFormOpen)}
+          className="flex items-center space-x-2 bg-brand hover:bg-brand/90 text-white px-4 py-2 rounded-lg transition-colors"
+        >
+          <FiPlus />
+          <span>Add Show</span>
+        </button>
+      </div>
+
+      {/* Theater Selector */}
+      <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+        <label className="block text-sm font-medium mb-2">Select Theater</label>
+        <select
+          value={selectedTheaterId}
+          onChange={(e) => setSelectedTheaterId(e.target.value)}
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand/50 focus:border-brand/50 outline-none transition"
+          disabled={loadingShows}
+        >
+          {theaters.map((t) => (
+            <option key={t._id} value={t._id}>
+              {t.name} - {t.city}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Add Show Form */}
+      {isFormOpen && (
+        <form
+          onSubmit={create}
+          className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4 animate-fadeIn"
+        >
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Add New Show</h3>
+            <button
+              type="button"
+              onClick={() => setIsFormOpen(false)}
+              className="text-gray-400 hover:text-white"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Movie</label>
+              <select
+                value={form.movie}
+                onChange={(e) => set('movie', e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand/50 focus:border-brand/50 outline-none transition"
+                required
+                disabled={isLoading}
+              >
+                <option value="">Select a movie</option>
+                {movies.map((m) => (
+                  <option key={m._id} value={m._id}>
+                    {m.title} ({m.releaseYear})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Screen</label>
+              <select
+                value={form.screen}
+                onChange={(e) => set('screen', e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand/50 focus:border-brand/50 outline-none transition"
+                required
+                disabled={isLoading || availableScreens.length === 0}
+              >
+                <option value="">Select a screen</option>
+                {availableScreens.map((screen) => (
+                  <option key={screen._id} value={screen._id}>
+                    {screen.name} (Seats: {screen.capacity})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Start Time</label>
+              <input
+                type="datetime-local"
+                value={form.startTime}
+                onChange={(e) => set('startTime', e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand/50 focus:border-brand/50 outline-none transition"
+                required
+                disabled={isLoading}
+                min={new Date().toISOString().slice(0, 16)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">End Time</label>
+              <input
+                type="datetime-local"
+                value={form.endTime}
+                onChange={(e) => set('endTime', e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand/50 focus:border-brand/50 outline-none transition"
+                required
+                disabled={isLoading}
+                min={form.startTime || new Date().toISOString().slice(0, 16)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Price per ticket (₹)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="10"
+                value={form.price}
+                onChange={(e) => set('price', e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand/50 focus:border-brand/50 outline-none transition"
+                required
+                disabled={isLoading}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setIsFormOpen(false)}
+              className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
+              disabled={isLoading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-brand hover:bg-brand/90 text-white rounded-lg transition-colors flex items-center space-x-2"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Creating...' : 'Create Show'}
+              {!isLoading && <FiPlus size={18} />}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Shows List */}
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold">
+            {loadingShows ? 'Loading shows...' : `Upcoming Shows (${shows.length})`}
+          </h3>
+        </div>
+
+        {loadingShows ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand"></div>
+          </div>
+        ) : shows.length === 0 ? (
+          <div className="text-center py-12 bg-white/5 rounded-xl">
+            <FiFilm className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-lg font-medium">No shows scheduled</h3>
+            <p className="mt-1 text-sm text-gray-400">
+              Get started by adding a new show
+            </p>
+            <button
+              onClick={() => setIsFormOpen(true)}
+              className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand/50"
+            >
+              <FiPlus className="-ml-1 mr-2 h-5 w-5" />
+              Add Show
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {Object.entries(showsByDate).map(([date, dateShows]) => {
+              const showDate = parseISO(date);
+              const isPast = isAfter(new Date(), showDate);
+              
+              return (
+                <div key={date} className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+                  <div className={`px-6 py-3 ${isPast ? 'bg-gray-800/50' : 'bg-brand/10'} border-b border-white/10`}>
+                    <h4 className="font-medium">
+                      {format(showDate, 'EEEE, MMMM d, yyyy')}
+                      {isPast && <span className="ml-2 text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded-full">Past</span>}
+                    </h4>
+                  </div>
+                  <div className="divide-y divide-white/5">
+                    {dateShows.map((show) => {
+                      const movie = movies.find(m => m._id === show.movie);
+                      const screen = availableScreens.find(s => s._id === show.screen);
+                      const isShowPast = isAfter(new Date(), new Date(show.endTime));
+                      
+                      return (
+                        <div key={show._id} className="p-4 hover:bg-white/2.5 transition-colors">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center space-x-3">
+                                <div className="flex-shrink-0 w-16 h-24 bg-gray-700 rounded-md overflow-hidden">
+                                  {movie?.posterUrl ? (
+                                    <img 
+                                      src={movie.posterUrl} 
+                                      alt={movie.title} 
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                                      <FiFilm className="h-6 w-6 text-gray-500" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="font-medium truncate">{movie?.title || 'Unknown Movie'}</h4>
+                                  <div className="flex flex-wrap items-center mt-1 text-sm text-gray-400 space-x-3">
+                                    <span className="flex items-center">
+                                      <FiClock className="mr-1.5 h-3.5 w-3.5" />
+                                      {format(parseISO(show.startTime), 'h:mm a')} - {format(parseISO(show.endTime), 'h:mm a')}
+                                    </span>
+                                    <span>•</span>
+                                    <span>{screen?.name || 'Screen N/A'}</span>
+                                    <span>•</span>
+                                    <span>₹{show.price}</span>
+                                    <span>•</span>
+                                    <span>{screen ? `${screen.capacity - (show.bookedSeats?.length || 0)}/${screen.capacity} seats` : 'Seats N/A'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="ml-4 flex-shrink-0 flex items-center space-x-2">
+                              <button
+                                onClick={() => remove(show._id)}
+                                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded-full transition-colors"
+                                title="Delete show"
+                                disabled={isLoading}
+                              >
+                                <FiTrash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

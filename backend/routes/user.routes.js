@@ -12,6 +12,7 @@ const {
   getMyTheaters,
   uploadProfilePicture,
   deleteProfilePicture,
+  updateMe,
 } = require('../controllers/user.controller');
 const { protect, restrictTo } = require('../middleware/auth.middleware');
 const { uploadSingle } = require('../middleware/upload.middleware');
@@ -20,6 +21,9 @@ const router = express.Router();
 
 // All routes require authentication
 router.use(protect);
+
+// Self update
+router.patch('/me', updateMe);
 
 // Profile picture routes (accessible to all authenticated users)
 router.post('/profile-picture', uploadSingle('profilePicture'), uploadProfilePicture);

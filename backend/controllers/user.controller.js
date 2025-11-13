@@ -3,6 +3,32 @@ const Theater = require('../models/Theater');
 const AppError = require('../utils/appError');
 const { uploadBufferToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
 
+// @desc    Update current user's basic fields
+// @route   PATCH /api/v1/users/me
+// @access  Private
+exports.updateMe = async (req, res, next) => {
+  try {
+    const allowed = ['name', 'email'];
+    const payload = {};
+    for (const k of allowed) if (req.body[k] != null) payload[k] = req.body[k];
+
+    if (payload.email) {
+      const exists = await User.findOne({ email: payload.email, _id: { $ne: req.user.id } });
+      if (exists) return next(new AppError('Email already in use', 400));
+    }
+
+    const user = await User.findByIdAndUpdate(req.user.id, payload, { new: true, runValidators: true }).select('-password');
+    if (!user) return next(new AppError('User not found', 404));
+
+    res.status(200).json({
+      status: 'success',
+      data: { user },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Get all users
 // @route   GET /api/v1/users
 // @access  Private/Admin

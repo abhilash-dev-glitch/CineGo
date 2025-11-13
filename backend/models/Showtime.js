@@ -50,5 +50,13 @@ showtimeSchema.virtual('bookings', {
   localField: '_id',
 });
 
+// NEW: Virtual property to count bookings for a showtime
+showtimeSchema.virtual('bookingCount', {
+  ref: 'Booking',
+  foreignField: 'showtime',
+  localField: '_id',
+  count: true // This will return a count instead of the documents
+});
+
 const Showtime = mongoose.model('Showtime', showtimeSchema);
 module.exports = Showtime;

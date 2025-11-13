@@ -16,6 +16,7 @@ const bookingRoutes = require('./routes/booking.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const webhookRoutes = require('./routes/webhook.routes');
 const notificationRoutes = require('./routes/notification.routes');
+const dashboardRoutes = require('./routes/dashboard.routes'); // <-- ADD THIS
 
 const app = express();
 
@@ -24,7 +25,7 @@ app.use('/api/v1/webhooks', webhookRoutes);
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Match your Vite port
   credentials: true, // Allow cookies to be sent
 }));
 app.use(express.json());
@@ -49,6 +50,7 @@ app.use('/api/v1/showtimes', showtimeRoutes);
 app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/dashboard', dashboardRoutes); // <-- ADD THIS
 
 // Handle undefined routes 
 app.use(notFound);

@@ -5,6 +5,7 @@ const { connectRedis, disconnectRedis } = require('./config/redis');
 const { connectRabbitMQ, closeRabbitMQ } = require('./config/rabbitmq');
 const { initializeEmailService } = require('./services/email.service');
 const { initializeSMSService } = require('./services/sms.service');
+const { initWebSocket } = require('./config/websocket'); // Import WebSocket initializer
 
 // Load environment variables
 dotenv.config();
@@ -27,6 +28,9 @@ const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 });
+
+// Initialize WebSocket server
+initWebSocket(server); // <-- Corrected function name from initializeWebSocket to initWebSocket
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {

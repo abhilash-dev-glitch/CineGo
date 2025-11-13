@@ -4,6 +4,7 @@ const { validationResult } = require('express-validator');
 const AppError = require('../utils/appError');
 const { sendTokenResponse, clearTokenCookie } = require('../utils/cookieHelper');
 const { sendWelcomeNotification } = require('../services/notification.service');
+const { broadcast } = require('../config/websocket'); // Import broadcast
 
 // @desc    Register a new user
 // @route   POST /api/v1/auth/register
@@ -37,6 +38,18 @@ exports.register = async (req, res, next) => {
 
     // Send welcome notification (async via queue)
     await sendWelcomeNotification(user);
+
+    // Broadcast WebSocket event for new user
+    broadcast({
+      type: 'NEW_USER',
+      data: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+      }
+    });
 
     // Send token response with cookie
     sendTokenResponse(user, 201, res);

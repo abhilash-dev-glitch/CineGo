@@ -15,7 +15,20 @@ exports.getAllTheaters = async (req, res, next) => {
       .limitFields()
       .paginate();
 
-    const theaters = await features.query;
+    // Populate showtimes to get insights for the admin panel
+    const theaters = await features.query.populate({
+      path: 'showtimes',
+      match: { startTime: { $gte: new Date() } }, // Only active/upcoming showtimes
+      populate: [
+        {
+          path: 'movie',
+          select: 'title', // We only need the movie title
+        },
+        {
+          path: 'bookingCount', // Use the virtual property
+        },
+      ],
+    });
 
     res.status(200).json({
       status: 'success',
@@ -34,7 +47,19 @@ exports.getAllTheaters = async (req, res, next) => {
 // @access  Public
 exports.getTheater = async (req, res, next) => {
   try {
-    const theater = await Theater.findById(req.params.id);
+    const theater = await Theater.findById(req.params.id).populate({
+      path: 'showtimes',
+      match: { startTime: { $gte: new Date() } },
+      populate: [
+        {
+          path: 'movie',
+          select: 'title poster',
+        },
+        {
+          path: 'bookingCount',
+        },
+      ],
+    });
 
     if (!theater) {
       return next(new AppError('No theater found with that ID', 404));
@@ -71,7 +96,7 @@ exports.createTheater = async (req, res, next) => {
 
 // @desc    Update theater
 // @route   PATCH /api/v1/theaters/:id
-// @access  Private/Admin
+// @access  Private/Admin or TheaterManager
 exports.updateTheater = async (req, res, next) => {
   try {
     const theater = await Theater.findByIdAndUpdate(
@@ -103,11 +128,14 @@ exports.updateTheater = async (req, res, next) => {
 // @access  Private/Admin
 exports.deleteTheater = async (req, res, next) => {
   try {
-    const theater = await Theater.findByIdAndDelete(req.params.id);
+    const theater = await Theater.findById(req.params.id);
 
     if (!theater) {
       return next(new AppError('No theater found with that ID', 404));
     }
+
+    // Add pre-hook on Theater model to delete showtimes
+    await theater.deleteOne(); // Use deleteOne to trigger middleware
 
     res.status(204).json({
       status: 'success',

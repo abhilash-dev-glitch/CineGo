@@ -23,14 +23,45 @@ api.interceptors.request.use((config) => {
 })
 
 export const MoviesAPI = {
-  list: (params) => api.get('/movies', { params }).then(r => r.data.data.movies),
-  get: (id) => api.get(`/movies/${id}`).then(r => r.data.data.movie),
-  showtimes: (id) => api.get(`/movies/${id}/showtimes`).then(r => r.data.data.showtimes)
+  list: async (params) => {
+    const response = await api.get('/movies', { params });
+    // Handle different response structures
+    if (response.data && response.data.data && response.data.data.movies) {
+      return response.data.data.movies;
+    } else if (Array.isArray(response.data)) {
+      return response.data;
+    } else if (response.data && response.data.data) {
+      return response.data.data;
+    }
+    return [];
+  },
+  get: async (id) => {
+    const response = await api.get(`/movies/${id}`);
+    return response.data?.data?.movie || response.data;
+  },
+  showtimes: async (id) => {
+    const response = await api.get(`/movies/${id}/showtimes`);
+    return response.data?.data?.showtimes || [];
+  }
 }
 
 export const ShowtimesAPI = {
-  get: (id) => api.get(`/showtimes/${id}`).then(r => r.data.data.showtime),
-  list: (params) => api.get('/showtimes', { params }).then(r => r.data.data.showtimes)
+  get: async (id) => {
+    const response = await api.get(`/showtimes/${id}`);
+    return response.data?.data?.showtime || response.data;
+  },
+  list: async (params) => {
+    const response = await api.get('/showtimes', { params });
+    // Handle different response structures
+    if (response.data && response.data.data && response.data.data.showtimes) {
+      return response.data.data.showtimes;
+    } else if (Array.isArray(response.data)) {
+      return response.data;
+    } else if (response.data && response.data.data) {
+      return response.data.data;
+    }
+    return [];
+  }
 }
 
 export const BookingAPI = {
@@ -39,6 +70,25 @@ export const BookingAPI = {
   create: (payload) => api.post('/bookings', payload).then(r => r.data.data.booking),
   myBookings: () => api.get('/bookings/my-bookings').then(r => r.data.data.bookings),
 }
+
+export const TheatersAPI = {
+  list: async (params = {}) => {
+    const response = await api.get('/theaters', { params });
+    // Handle different response structures
+    if (response.data && response.data.data && response.data.data.theaters) {
+      return response.data.data.theaters;
+    } else if (Array.isArray(response.data)) {
+      return response.data;
+    } else if (response.data && response.data.data) {
+      return response.data.data;
+    }
+    return [];
+  },
+  get: async (id) => {
+    const response = await api.get(`/theaters/${id}`);
+    return response.data?.data?.theater || response.data;
+  }
+};
 
 export const PaymentAPI = {
   gateways: () => api.get('/payments/gateways').then(r => r.data.data),

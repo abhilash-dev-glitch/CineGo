@@ -35,13 +35,31 @@ export default function Movies() {
 
     // Fetch movies based on the selected filter
     MoviesAPI.list(params)
-      .then(data => {
-        setMovies(Array.isArray(data) ? data : []);
+      .then(moviesData => {
+        if (!moviesData || !Array.isArray(moviesData)) {
+          console.error('Invalid movies data received:', moviesData);
+          setError('Invalid data received from server');
+          return;
+        }
+        
+        // Filter out any invalid movie objects
+        const validMovies = moviesData.filter(movie => 
+          movie && 
+          (movie.title || movie.name) && 
+          (movie.poster || movie.image)
+        );
+        
+        if (validMovies.length === 0 && moviesData.length > 0) {
+          console.warn('No valid movies found in response:', moviesData);
+        }
+        
+        setMovies(validMovies);
       })
       .catch(err => {
         console.error('Error fetching movies:', err);
         setError('Failed to load movies. Please try again later.');
         toast.error('Error', 'Failed to load movies');
+        setMovies([]); // Ensure movies is always an array
       })
       .finally(() => {
         setLoading(false);

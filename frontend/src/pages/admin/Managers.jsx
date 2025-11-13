@@ -1,515 +1,410 @@
-import { useState, useEffect } from 'react';
-import { api } from '../../lib/api';
+import { useState, useEffect, Fragment } from 'react';
+import { adminService } from '/src/services/adminService.js'; // Corrected
+import { toast } from '/src/lib/toast.js'; // Corrected
+import {
+  FiPlus,
+  FiEdit,
+  FiTrash2,
+  FiLoader,
+  FiAlertCircle,
+  FiX,
+  FiUserPlus,
+  FiHome,
+  FiCheckCircle,
+  FiXCircle,
+  FiUserCheck
+} from 'react-icons/fi';
 
-const Managers = () => {
-  const [managers, setManagers] = useState([]);
-  const [theaters, setTheaters] = useState([]);
-  const [loading, setLoading] = useState({
-    managers: false,
-    theaters: false,
-    submitting: false
-  });
-  
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    password: '',
-    assignedTheaters: [],
-    isActive: true,
-  });
-  
-  const [editingId, setEditingId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({
-    status: 'all',
-    theater: 'all',
-    sortBy: 'name',
-    sortOrder: 'asc',
-  });
-  
-  const [showPassword, setShowPassword] = useState(false);
-
-  // Fetch managers and theaters
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(prev => ({ ...prev, managers: true, theaters: true }));
-        
-        const [managersRes, theatersRes] = await Promise.all([
-          api.get('/users?role=manager'),
-          api.get('/theaters')
-        ]);
-        
-        setManagers(managersRes.data);
-        setTheaters(theatersRes.data);
-        
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(prev => ({ ...prev, managers: false, theaters: false }));
-      }
-    };
-    
-    fetchData();
-  }, []);
-
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
-  const handleTheaterToggle = (theaterId) => {
-    setFormData(prev => ({
-      ...prev,
-      assignedTheaters: prev.assignedTheaters.includes(theaterId)
-        ? prev.assignedTheaters.filter(id => id !== theaterId)
-        : [...prev.assignedTheaters, theaterId]
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(prev => ({ ...prev, submitting: true }));
-    
-    try {
-      const managerData = { 
-        ...formData,
-        role: 'manager',
-        // Only include password if it's a new manager or if the password field is not empty
-        ...(formData.password ? { password: formData.password } : {})
-      };
-      
-      if (editingId) {
-        await api.put(`/users/${editingId}`, managerData);
-      } else {
-        await api.post('/users', managerData);
-      }
-      
-      // Refresh managers list
-      const { data } = await api.get('/users?role=manager');
-      setManagers(data);
-      
-      // Reset form
-      resetForm();
-      
-    } catch (error) {
-      console.error('Error saving manager:', error);
-    } finally {
-      setLoading(prev => ({ ...prev, submitting: false }));
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      password: '',
-      assignedTheaters: [],
-      isActive: true,
-    });
-    setEditingId(null);
-    setShowPassword(false);
-  };
-
-  const handleEdit = (manager) => {
-    setFormData({
-      name: manager.name,
-      email: manager.email,
-      phone: manager.phone || '',
-      password: '', // Don't load password for security reasons
-      assignedTheaters: manager.assignedTheaters?.map(t => t._id || t) || [],
-      isActive: manager.isActive !== undefined ? manager.isActive : true,
-    });
-    setEditingId(manager._id);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this manager? This action cannot be undone.')) {
-      try {
-        await api.delete(`/users/${id}`);
-        const { data } = await api.get('/users?role=manager');
-        setManagers(data);
-      } catch (error) {
-        console.error('Error deleting manager:', error);
-      }
-    }
-  };
-
-  const toggleStatus = async (id, currentStatus) => {
-    try {
-      await api.patch(`/users/${id}`, { isActive: !currentStatus });
-      const { data } = await api.get('/users?role=manager');
-      setManagers(data);
-    } catch (error) {
-      console.error('Error updating manager status:', error);
-    }
-  };
-
-  // Filter and sort managers
-  const filteredManagers = managers.filter(manager => {
-    const matchesSearch = 
-      manager.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      manager.email?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = filters.status === 'all' || 
-      (filters.status === 'active' ? manager.isActive : !manager.isActive);
-    
-    const matchesTheater = filters.theater === 'all' || 
-      manager.assignedTheaters?.some(t => (t._id || t) === filters.theater);
-    
-    return matchesSearch && matchesStatus && matchesTheater;
-  }).sort((a, b) => {
-    if (filters.sortBy === 'name') {
-      return filters.sortOrder === 'asc' 
-        ? a.name.localeCompare(b.name)
-        : b.name.localeCompare(a.name);
-    } else if (filters.sortBy === 'theaterCount') {
-      const aCount = a.assignedTheaters?.length || 0;
-      const bCount = b.assignedTheaters?.length || 0;
-      return filters.sortOrder === 'asc' ? aCount - bCount : bCount - aCount;
-    } else if (filters.sortBy === 'createdAt') {
-      return filters.sortOrder === 'asc'
-        ? new Date(a.createdAt) - new Date(b.createdAt)
-        : new Date(b.createdAt) - new Date(a.createdAt);
-    }
-    return 0;
-  });
-
-  // Get unique assigned theaters across all managers
-  const assignedTheaterIds = [...new Set(
-    managers.flatMap(m => 
-      m.assignedTheaters?.map(t => ({
-        id: t._id || t,
-        name: t.name || theaters.find(th => th._id === t)?.name || 'Unknown Theater'
-      })) || []
-    )
-  )];
-
+// Modal and FormInput components
+const Modal = ({ isOpen, onClose, title, children }) => {
+  if (!isOpen) return null;
   return (
-    <div className="space-y-6">
-      <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">
-          {editingId ? 'Edit Manager' : 'Add New Manager'}
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Full Name</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                required
-                disabled={!!editingId}
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                {editingId ? 'New Password (leave blank to keep current)' : 'Password'}
-              </label>
-              <div className="mt-1 flex rounded-md shadow-sm">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className={`flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-l-md border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${!editingId ? 'required' : ''}`}
-                  placeholder={editingId ? '••••••••' : '••••••••'}
-                  required={!editingId}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 text-sm hover:bg-gray-100"
-                >
-                  {showPassword ? (
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Phone Number</label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              />
-            </div>
-            
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Assigned Theaters</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-2 border border-gray-200 rounded-md">
-                {theaters.length > 0 ? (
-                  theaters.map(theater => (
-                    <div key={theater._id} className="flex items-center">
-                      <input
-                        id={`theater-${theater._id}`}
-                        type="checkbox"
-                        checked={formData.assignedTheaters.includes(theater._id)}
-                        onChange={() => handleTheaterToggle(theater._id)}
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor={`theater-${theater._id}`} className="ml-2 text-sm text-gray-700">
-                        {theater.name} ({theater.city})
-                      </label>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500 col-span-3">No theaters available. Please add theaters first.</p>
-                )}
-              </div>
-            </div>
-            
-            <div className="flex items-center">
-              <input
-                id="isActive"
-                name="isActive"
-                type="checkbox"
-                checked={formData.isActive}
-                onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-              />
-              <label htmlFor="isActive" className="ml-2 block text-sm text-gray-700">
-                Active Account
-              </label>
-            </div>
-          </div>
-          
-          <div className="flex justify-end space-x-3 pt-4">
-            {editingId && (
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Cancel
-              </button>
-            )}
-            <button
-              type="submit"
-              disabled={loading.submitting}
-              className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading.submitting ? 'Saving...' : (editingId ? 'Update Manager' : 'Add Manager')}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-            <h2 className="text-xl font-semibold">Manage Managers</h2>
-            <div className="mt-4 md:mt-0 flex space-x-2">
-              <input
-                type="text"
-                placeholder="Search managers..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full md:w-64 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              />
-            </div>
-          </div>
-          
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Status</label>
-              <select
-                value={filters.status}
-                onChange={(e) => setFilters({...filters, status: e.target.value})}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Theater</label>
-              <select
-                value={filters.theater}
-                onChange={(e) => setFilters({...filters, theater: e.target.value})}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              >
-                <option value="all">All Theaters</option>
-                {assignedTheaterIds.map(theater => (
-                  <option key={theater.id} value={theater.id}>
-                    {theater.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Sort By</label>
-              <select
-                value={filters.sortBy}
-                onChange={(e) => setFilters({...filters, sortBy: e.target.value})}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              >
-                <option value="name">Name</option>
-                <option value="theaterCount">Number of Theaters</option>
-                <option value="createdAt">Join Date</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Order</label>
-              <select
-                value={filters.sortOrder}
-                onChange={(e) => setFilters({...filters, sortOrder: e.target.value})}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              >
-                <option value="asc">Ascending</option>
-                <option value="desc">Descending</option>
-              </select>
-            </div>
-          </div>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl border border-gray-700 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-gray-700">
+          <h3 className="text-xl font-semibold text-white">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white hover:bg-gray-700 rounded-full p-2 transition-colors">
+            <FiX size={20} />
+          </button>
         </div>
-        
-        {loading.managers ? (
-          <div className="p-6 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Loading managers...</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Manager
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Contact
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Assigned Theaters
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredManagers.length > 0 ? (
-                  filteredManagers.map((manager) => (
-                    <tr key={manager._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                            <span className="text-indigo-600 font-medium">
-                              {manager.name ? manager.name.charAt(0).toUpperCase() : 'M'}
-                            </span>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{manager.name}</div>
-                            <div className="text-sm text-gray-500">{manager.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">{manager.phone || 'N/A'}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">
-                          {manager.assignedTheaters?.length > 0 ? (
-                            <div className="space-y-1">
-                              {manager.assignedTheaters.slice(0, 2).map(theater => (
-                                <div key={theater._id || theater} className="text-sm">
-                                  {typeof theater === 'object' ? theater.name : 
-                                   theaters.find(t => t._id === theater)?.name || 'Unknown Theater'}
-                                </div>
-                              ))}
-                              {manager.assignedTheaters.length > 2 && (
-                                <div className="text-xs text-indigo-600">
-                                  +{manager.assignedTheaters.length - 2} more
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400 text-sm">No theaters assigned</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span 
-                          onClick={() => toggleStatus(manager._id, manager.isActive)}
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer ${
-                            manager.isActive 
-                              ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                              : 'bg-red-100 text-red-800 hover:bg-red-200'
-                          }`}
-                        >
-                          {manager.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleEdit(manager)}
-                          className="text-indigo-600 hover:text-indigo-900 mr-3"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(manager._id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
-                      No managers found. {searchTerm ? 'Try a different search term.' : 'Add a new manager to get started.'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="p-6 max-h-[70vh] overflow-y-auto">{children}</div>
       </div>
     </div>
   );
 };
 
-export default Managers;
+const FormInput = ({ label, name, value, onChange, type = 'text', required = false, as = 'input', placeholder = '' }) => {
+  const commonProps = { name, id: name, value: value || '', onChange, required, placeholder,
+    className: 'w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-transparent transition-all duration-200',
+  };
+  return (
+    <div>
+      <label htmlFor={name} className="block text-sm font-medium text-gray-300 mb-1.5">{label}</label>
+      <input {...commonProps} type={type} />
+    </div>
+  );
+};
+
+export default function AdminManagers() {
+  const [managers, setManagers] = useState([]);
+  const [theaters, setTheaters] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentManager, setCurrentManager] = useState(null);
+
+  // Fetch managers and theaters
+  const fetchAllData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [managersData, theatersData] = await Promise.all([
+        adminService.getUsers({ role: 'theaterManager' }),
+        adminService.getTheaters(),
+      ]);
+      setManagers(managersData.data.users || []);
+      setTheaters(theatersData.data.theaters || []);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('Failed to load data.');
+      toast.error('Failed to load data', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  // --- Handlers ---
+
+  const handleOpenModal = (manager = null) => {
+    if (manager) {
+      setCurrentManager({
+        ...manager,
+        managedTheaters: Array.isArray(manager.managedTheaters) ? manager.managedTheaters.map(t => t._id) : [],
+        password: '', // Don't pre-fill password
+      });
+    } else {
+      setCurrentManager({ 
+        isActive: true, 
+        role: 'theaterManager',
+        managedTheaters: [],
+      });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setCurrentManager(null);
+  };
+  
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setCurrentManager((prev) => ({ ...prev, [name]: value }));
+  };
+  
+  const handleTheaterToggle = (theaterId) => {
+    setCurrentManager(prev => {
+      const currentTheaters = Array.isArray(prev.managedTheaters) ? [...prev.managedTheaters] : [];
+      const theaterIndex = currentTheaters.findIndex(id => id === theaterId || id._id === theaterId);
+      
+      let updatedTheaters;
+      if (theaterIndex === -1) {
+        // Add theater if not already in the list
+        updatedTheaters = [...currentTheaters, theaterId];
+      } else {
+        // Remove theater if already in the list
+        updatedTheaters = currentTheaters.filter((_, index) => index !== theaterIndex);
+      }
+      
+      return { ...prev, managedTheaters: updatedTheaters };
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!currentManager) return;
+
+    const managerData = {
+      ...currentManager,
+      // Only include managedTheaters if it exists and is an array
+      ...(Array.isArray(currentManager.managedTheaters) && {
+        managedTheaters: currentManager.managedTheaters
+      })
+    };
+    
+    // Only send password if it's being set/changed
+    if (!managerData.password) {
+      delete managerData.password;
+    }
+
+    try {
+      if (currentManager._id) {
+        // Update user (name, phone, isActive)
+        await adminService.updateUser(currentManager._id, managerData);
+        // Assign theaters separately
+        if (Array.isArray(currentManager.managedTheaters)) {
+          await adminService.assignTheatersToManager(currentManager._id, currentManager.managedTheaters);
+        }
+        toast.success('Manager updated successfully');
+      } else {
+        // Create new manager with role and managedTheaters
+        const newManager = await adminService.createManager({
+          ...managerData,
+          role: 'theaterManager',
+          managedTheaters: Array.isArray(currentManager.managedTheaters) ? currentManager.managedTheaters : []
+        });
+        
+        // If there are theaters to assign, do it after creation
+        if (Array.isArray(currentManager.managedTheaters) && currentManager.managedTheaters.length > 0) {
+          try {
+            await adminService.assignTheatersToManager(newManager._id, currentManager.managedTheaters);
+          } catch (assignError) {
+            console.error('Error assigning theaters:', assignError);
+            toast.warning('Manager created, but there was an error assigning theaters');
+          }
+        }
+        
+        toast.success('Manager created successfully');
+      }
+      handleCloseModal();
+      fetchAllData(); // Refresh the list
+    } catch (err) {
+      console.error('Error saving manager:', err);
+      toast.error('Failed to save manager', err.response?.data?.message || err.message);
+    }
+  };
+
+  const handleToggleStatus = async (user) => {
+     const action = user.isActive ? 'deactivate' : 'activate';
+     if (window.confirm(`Are you sure you want to ${action} this manager?`)) {
+      try {
+        await adminService.updateUser(user._id, { isActive: !user.isActive });
+        toast.success(`Manager ${action}d successfully`);
+        fetchAllData(); // Refresh list
+      } catch (err) {
+        console.error(`Error ${action}ing manager:`, err);
+        toast.error(`Failed to ${action} manager`, err.message);
+      }
+    }
+  };
+  
+  // --- Render Functions ---
+
+  const renderContent = () => {
+    if (loading) {
+      return <div className="flex justify-center items-center py-20"><FiLoader className="animate-spin text-brand text-4xl" /></div>;
+    }
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 bg-red-900/20 border border-red-700 rounded-lg text-red-300">
+          <FiAlertCircle className="text-4xl mb-2" />
+          <p>{error}</p>
+          <button onClick={fetchAllData} className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    if (managers.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 bg-gray-900/30 border-2 border-dashed border-gray-700 rounded-lg text-gray-500">
+          <FiUserCheck className="text-5xl mb-3" />
+          <h3 className="text-xl font-semibold text-gray-300">No Managers Found</h3>
+          <p className="mt-1">Get started by adding a new theater manager.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-700">
+            <thead className="bg-gray-800">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Manager</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Contact</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Assigned Theaters</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody className="bg-gray-800/50 divide-y divide-gray-700">
+              {managers.map((manager) => (
+                <tr key={manager._id} className="hover:bg-gray-700/50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-10 w-10">
+                        <img className="h-10 w-10 rounded-full object-cover" src={manager.profilePicture || `https://ui-avatars.com/api/?name=${manager.name}&background=1f2937&color=9ca3af`} alt={manager.name} />
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-white">{manager.name}</div>
+                        <div className="text-sm text-gray-400">{manager.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{manager.phone}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                    {(manager.managedTheaters || []).length > 0
+                      ? manager.managedTheaters.map(t => theaters.find(th => th._id === t)?.name || '...').join(', ')
+                      : <span className="text-gray-500">None</span>
+                    }
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${manager.isActive ? 'bg-green-900/50 text-green-300 border border-green-700' : 'bg-red-900/50 text-red-300 border border-red-700'}`}>
+                      {manager.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                    <button onClick={() => handleOpenModal(manager)} className="text-indigo-400 hover:text-indigo-300 transition-colors p-1" title="Edit Manager">
+                      <FiEdit size={18} />
+                    </button>
+                    <button onClick={() => handleToggleStatus(manager)} className={manager.isActive ? "text-red-500 hover:text-red-400" : "text-green-500 hover:text-green-400"} title={manager.isActive ? "Deactivate" : "Activate"}>
+                      {manager.isActive ? <FiXCircle size={18} /> : <FiCheckCircle size={18} />}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="text-white">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Manager Management</h1>
+        <button onClick={() => handleOpenModal()} className="flex items-center px-4 py-2.5 bg-brand hover:bg-brand-dark text-white font-medium rounded-lg shadow-lg hover:shadow-brand/30 transition-all duration-200">
+          <FiUserPlus className="w-5 h-5 mr-2" />
+          Add New Manager
+        </button>
+      </div>
+
+      {renderContent()}
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        title={currentManager?._id ? 'Edit Manager' : 'Add New Manager'}
+      >
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <FormInput 
+              label="Name" 
+              name="name" 
+              value={currentManager?.name || ''} 
+              onChange={handleFormChange} 
+              required 
+            />
+            <FormInput 
+              label="Email" 
+              name="email" 
+              type="email" 
+              value={currentManager?.email || ''} 
+              onChange={handleFormChange} 
+              required 
+              disabled={!!currentManager?._id} 
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <FormInput 
+              label="Phone" 
+              name="phone" 
+              value={currentManager?.phone || ''} 
+              onChange={handleFormChange} 
+              required 
+            />
+            <FormInput 
+              label="Password" 
+              name="password" 
+              type="password" 
+              value={currentManager?.password || ''} 
+              onChange={handleFormChange} 
+              placeholder={currentManager?._id ? 'Leave blank to keep unchanged' : 'Required'}
+              required={!currentManager?._id}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1.5">Assign Theaters</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-3 bg-gray-900 border border-gray-700 rounded-lg max-h-48 overflow-y-auto">
+              {theaters.length > 0 ? (
+                theaters.map(theater => {
+                  const isChecked = Array.isArray(currentManager?.managedTheaters) && 
+                    currentManager.managedTheaters.some(t => 
+                      (typeof t === 'string' && t === theater._id) || 
+                      (t && typeof t === 'object' && t._id === theater._id)
+                    );
+                  
+                  return (
+                    <label key={theater._id} className="flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-gray-700/50">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleTheaterToggle(theater._id)}
+                        className="h-4 w-4 text-brand bg-gray-800 border-gray-600 rounded focus:ring-brand"
+                      />
+                      <span className="text-sm text-gray-200">
+                        {theater.name} 
+                        {theater.city && ` (${theater.city})`}
+                        {isChecked && (
+                          <span className="ml-2 text-xs bg-brand/20 text-brand px-2 py-0.5 rounded-full">
+                            Assigned
+                          </span>
+                        )}
+                      </span>
+                    </label>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-gray-500 col-span-full">No theaters available to assign. Please add theaters first.</p>
+              )}
+            </div>
+            {theaters.length > 0 && (
+              <p className="mt-1 text-xs text-gray-400">
+                {Array.isArray(currentManager?.managedTheaters) && currentManager.managedTheaters.length > 0 
+                  ? `${currentManager.managedTheaters.length} theater(s) selected` 
+                  : 'No theaters selected'}
+              </p>
+            )}
+          </div>
+          
+          <div className="flex items-center pt-4">
+            <input
+              type="checkbox"
+              id="isActive"
+              checked={currentManager?.isActive || false}
+              onChange={(e) => setCurrentManager(prev => ({ ...prev, isActive: e.target.checked }))}
+              className="h-4 w-4 text-brand bg-gray-900 border-gray-700 rounded focus:ring-brand"
+            />
+            <label htmlFor="isActive" className="ml-2 text-sm text-gray-300">
+              Manager account is Active
+            </label>
+          </div>
+          
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">
+            <button 
+              type="button" 
+              onClick={handleCloseModal} 
+              className="px-5 py-2.5 rounded-lg text-sm font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="px-5 py-2.5 rounded-lg text-sm font-medium text-white bg-brand hover:bg-brand-dark transition-colors"
+            >
+              {currentManager?._id ? 'Update Manager' : 'Create Manager'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  );
+}
