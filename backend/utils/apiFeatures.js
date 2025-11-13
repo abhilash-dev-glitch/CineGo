@@ -7,13 +7,17 @@ class APIFeatures {
   filter() {
     // 1A) Filtering
     const queryObj = { ...this.queryString };
-    const excludedFields = ['page', 'sort', 'limit', 'fields'];
+    
+    // --- THIS IS THE FIX ---
+    // Added '_ts' to the list of fields to ignore.
+    const excludedFields = ['page', 'sort', 'limit', 'fields', 'view', 'filter', '_ts'];
     excludedFields.forEach((el) => delete queryObj[el]);
 
-    // 1B) Advanced filtering
+    // 1B) Advanced filtering (for things like ?rating[gte]=8)
     let queryStr = JSON.stringify(queryObj);
     queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, (match) => `$${match}`);
 
+    // Apply any *remaining* filters (like genre)
     this.query = this.query.find(JSON.parse(queryStr));
 
     return this;
@@ -24,7 +28,8 @@ class APIFeatures {
       const sortBy = this.queryString.sort.split(',').join(' ');
       this.query = this.query.sort(sortBy);
     } else {
-      this.query = this.query.sort('-createdAt');
+      // Default sort if none provided
+      this.query = this.query.sort('-releaseDate'); // Sort by release date by default
     }
 
     return this;

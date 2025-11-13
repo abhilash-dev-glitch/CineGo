@@ -9,9 +9,46 @@ const { uploadBufferToCloudinary, deleteFromCloudinary } = require('../config/cl
 // @access  Public
 exports.getAllMovies = async (req, res, next) => {
   try {
+    // --- UPDATED LOGIC ---
+    const filter = {}; // This will be our base filter for MongoDB
+
+    // Get the filter param from either 'view' (Home.jsx) or 'filter' (Movies.jsx)
+    const viewFilter = req.query.view || req.query.filter;
+
+    if (viewFilter) {
+      switch (viewFilter) {
+        case 'active':
+        case 'now-showing':
+        case 'new':
+          filter.status = 'active'; // Filter by the new 'status' field
+          break;
+        
+        case 'upcoming':
+        case 'coming-soon':
+          filter.status = 'upcoming'; // Filter by the new 'status' field
+          break;
+
+        case 'inactive':
+          filter.status = 'inactive'; // Filter by the new 'status' field
+          break;
+
+        case 'all':
+        case 'top-rated': // 'top-rated' will be handled by sorting, just need all movies
+        default:
+          // No status filter needed, will show all
+          break;
+      }
+    } else {
+      // Default behavior if no filter is provided:
+      // Only show 'active' (Now Showing) movies.
+      filter.status = 'active';
+    }
+    // --- END OF UPDATED LOGIC ---
+
     // Execute query
-    const features = new APIFeatures(Movie.find(), req.query)
-      .filter()
+    // Pass the new 'filter' object directly to Movie.find()
+    const features = new APIFeatures(Movie.find(filter), req.query)
+      .filter() // This will now apply remaining filters
       .sort()
       .limitFields()
       .paginate();

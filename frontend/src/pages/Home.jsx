@@ -8,7 +8,7 @@ export default function Home(){
   const [movies, setMovies] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [view, setView] = useState('active') // 'active' | 'new' | 'all' | 'inactive'
+  const [view, setView] = useState('all') // 'active' | 'new' | 'all' | 'upcoming'
 
   useEffect(() => {
     setLoading(true)
@@ -18,8 +18,8 @@ export default function Home(){
         ? { view: 'new' }
         : view === 'all'
         ? { view: 'all', sort: '-releasedAt' }
-        : view === 'inactive'
-        ? { view: 'inactive' }
+        : view === 'upcoming' // Changed from 'inactive'
+        ? { view: 'upcoming' }
         : { view: 'active', sort: '-releasedAt' }
     MoviesAPI.list(params)
       .then(setMovies)
@@ -87,7 +87,8 @@ export default function Home(){
             <p className="text-sm text-gray-400 mt-1">Handpicked selections based on what's trending and highly rated</p>
           </div>
           <div className="flex items-center gap-2 text-xs bg-gray-900/50 p-1 rounded-lg">
-            {[['active', 'Now Showing'], ['new', 'New Releases'], ['all', 'All Movies'], ['inactive', 'Coming Soon']].map(([v, label])=> (
+            {/* --- FIX: Changed 'inactive' to 'upcoming' to match the desired logic --- */}
+            {[['active', 'Now Showing'], ['new', 'New Releases'], ['all', 'All Movies'], ['upcoming', 'Coming Soon']].map(([v, label])=> (
               <button
                 key={v}
                 onClick={()=> setView(v)}

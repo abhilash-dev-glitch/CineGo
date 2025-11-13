@@ -54,9 +54,14 @@ const movieSchema = new mongoose.Schema(
       default: null,
     },
     trailer: String,
-    isActive: {
-      type: Boolean,
-      default: true,
+    
+    // --- NEW STATUS FIELD ---
+    // Replaces the 'isActive' boolean
+    status: {
+      type: String,
+      enum: ['active', 'upcoming', 'inactive'],
+      default: 'upcoming',
+      required: true,
     },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
@@ -77,12 +82,12 @@ movieSchema.virtual('showtimes', {
   options: { sort: { startTime: 1 } }, // Sort showtimes by start time
 });
 
-// *** FIX HERE ***
-// Set default_language to 'none' to disable language-specific indexing
-// This prevents MongoDB from trying to use the 'language' field for override
+// *** FIX for language override ***
+// We set 'language_override' to a field that doesn't exist
+// to force MongoDB to use the simple index, not the language-specific one.
 movieSchema.index(
   { title: 'text', director: 'text' },
-  { default_language: 'none' } 
+  { default_language: 'none', language_override: 'nonexistent_field' }
 );
 
 

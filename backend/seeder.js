@@ -61,7 +61,7 @@ const movies = [
     ratingsCount: 1500,
     poster: 'https://placehold.co/400x600/1f2937/9ca3af?text=Inception',
     trailer: 'https://www.youtube.com/watch?v=YoHD9XEInc0',
-    isActive: true,
+    status: 'active', // --- UPDATED ---
   },
   {
     title: 'The Dark Knight',
@@ -77,7 +77,7 @@ const movies = [
     ratingsCount: 2000,
     poster: 'https://placehold.co/400x600/1f2937/9ca3af?text=The+Dark+Knight',
     trailer: 'https://www.youtube.com/watch?v=EXeTwQWrcwY',
-    isActive: true,
+    status: 'active', // --- UPDATED ---
   },
   {
     title: 'Interstellar',
@@ -98,8 +98,53 @@ const movies = [
     ratingsCount: 1200,
     poster: 'https://placehold.co/400x600/1f2937/9ca3af?text=Interstellar',
     trailer: 'https://www.youtube.com/watch?v=zSWdZVtXT7E',
-    isActive: true,
+    status: 'active', // --- UPDATED ---
   },
+  {
+    title: 'Kalki 2898 AD',
+    description: 'A modern-day avatar of Vishnu, a Hindu god, who is believed to have descended to Earth to protect the world from evil forces.',
+    duration: 181,
+    genre: ['Sci-Fi', 'Action', 'Fantasy'],
+    releaseDate: new Date('2024-06-27'), // Past date
+    director: 'Nag Ashwin',
+    cast: ['Prabhas', 'Amitabh Bachchan', 'Deepika Padukone', 'Kamal Haasan'],
+    language: 'Telugu',
+    ratingsAverage: 0,
+    ratingsCount: 0,
+    poster: 'https://upload.wikimedia.org/wikipedia/en/5/5a/Kalki_2898_AD_poster.jpg',
+    trailer: 'https://www.youtube.com/watch?v=k-PzpjT2mns',
+    status: 'active', // --- UPDATED ---
+  },
+  {
+    title: 'Pushpa 2: The Rule',
+    description: 'The saga of Pushpa Raj continues as he battles new foes and expands his smuggling empire, all while facing personal and legal challenges.',
+    duration: 190,
+    genre: ['Action', 'Crime', 'Drama'],
+    releaseDate: new Date('2024-12-05'), // Future date
+    director: 'Sukumar',
+    cast: ['Allu Arjun', 'Fahadh Faasil', 'Rashmika Mandanna'],
+    language: 'Telugu',
+    ratingsAverage: 0,
+    ratingsCount: 0,
+    poster: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e4/Pushpa_2_The_Rule_poster.jpg/220px-Pushpa_2_The_Rule_poster.jpg',
+    trailer: 'https://www.youtube.com/watch?v=84x_l2c5F7k',
+    status: 'upcoming', // --- UPDATED ---
+  },
+  {
+    title: 'Singham Again',
+    description: 'The third installment in the Singham series, where DCP Bajirao Singham returns to fight a new wave of crime threatening the nation.',
+    duration: 160,
+    genre: ['Action', 'Police', 'Drama'],
+    releaseDate: new Date('2026-01-23'), // Future date
+    director: 'Rohit Shetty',
+    cast: ['Ajay Devgn', 'Deepika Padukone', 'Ranveer Singh', 'Akshay Kumar'],
+    language: 'Hindi',
+    ratingsAverage: 0,
+    ratingsCount: 0,
+    poster: 'https://upload.wikimedia.org/wikipedia/en/thumb/8/8b/Singham_Again_poster.jpg/220px-Singham_Again_poster.jpg',
+    trailer: 'https://www.youtube.com/watch?v=example',
+    status: 'upcoming', // --- UPDATED ---
+  }
 ];
 
 const theaters = [
@@ -215,6 +260,9 @@ const importData = async () => {
 
     // Only create showtimes for the movies we just added/updated
     createdMovies.forEach((movie, index) => {
+      // Only create showtimes for 'active' movies
+      if (movie.status !== 'active') return;
+
       createdTheaters.forEach((theater) => {
         theater.screens.forEach((screen, screenIndex) => {
           // Create 3 showtimes per screen

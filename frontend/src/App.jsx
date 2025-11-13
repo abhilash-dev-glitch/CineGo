@@ -27,8 +27,8 @@ import AdminManagers from './pages/admin/Managers'
 
 // Import Manager components
 import ManagerDashboard from './pages/manager/ManagerDashboard'
-import ManageTheaters from './pages/manager/ManageTheaters' // We will create this
-import ManageShows from './pages/manager/ManageShows'     // We will create this
+import ManageTheaters from './pages/manager/ManageTheaters' 
+import ManageShows from './pages/manager/ManageShows'     
 
 export default function App() {
   const initAuth = useAuth(state => state.init)
@@ -42,7 +42,7 @@ export default function App() {
           <Routes>
             {/* Root path with role-based redirection */}
             <Route path="/" element={
-              <ProtectedRoute>
+              <ProtectedRoute requireAuth={false}>
                 {(user) => {
                   if (user?.role === 'admin') {
                     return <Navigate to="/admin" replace />;

@@ -16,7 +16,8 @@ const bookingRoutes = require('./routes/booking.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const webhookRoutes = require('./routes/webhook.routes');
 const notificationRoutes = require('./routes/notification.routes');
-const dashboardRoutes = require('./routes/dashboard.routes'); // <-- ADD THIS
+const dashboardRoutes = require('./routes/dashboard.routes');
+const reviewRoutes = require('./routes/review.routes'); // <-- 1. IMPORT REVIEW ROUTES
 
 const app = express();
 
@@ -50,7 +51,8 @@ app.use('/api/v1/showtimes', showtimeRoutes);
 app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
-app.use('/api/v1/dashboard', dashboardRoutes); // <-- ADD THIS
+app.use('/api/v1/dashboard', dashboardRoutes);
+app.use('/api/v1', reviewRoutes); // <-- 2. USE REVIEW ROUTES
 
 // Handle undefined routes 
 app.use(notFound);

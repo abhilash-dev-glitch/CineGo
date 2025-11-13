@@ -49,7 +49,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
 };
 
 // Reusable Form Input
-const FormInput = ({ label, name, value, onChange, type = 'text', required = false, as = 'input', placeholder = '' }) => {
+const FormInput = ({ label, name, value, onChange, type = 'text', required = false, as = 'input', placeholder = '', children }) => {
   const commonProps = {
     name,
     id: name,
@@ -68,6 +68,8 @@ const FormInput = ({ label, name, value, onChange, type = 'text', required = fal
       </label>
       {as === 'textarea' ? (
         <textarea {...commonProps} rows={4} />
+      ) : as === 'select' ? (
+        <select {...commonProps}>{children}</select>
       ) : (
         <input {...commonProps} type={type} />
       )}
@@ -134,10 +136,11 @@ export default function AdminMovies() {
         releaseDate: movie.releaseDate ? new Date(movie.releaseDate).toISOString().split('T')[0] : '',
         genre: Array.isArray(movie.genre) ? movie.genre.join(', ') : '',
         cast: Array.isArray(movie.cast) ? movie.cast.join(', ') : '',
+        status: movie.status || 'upcoming', // Default to upcoming if not set
       };
       setCurrentMovie(formattedMovie);
     } else {
-      setCurrentMovie({ isActive: true }); // Clear for new movie, default to active
+      setCurrentMovie({ status: 'upcoming' }); // Clear for new movie, default to upcoming
     }
     setIsModalOpen(true);
   };
@@ -201,9 +204,12 @@ export default function AdminMovies() {
       cast: currentMovie.cast?.split(',').map(c => c.trim()).filter(Boolean) || [],
       duration: Number(currentMovie.duration) || 0,
       ratingsAverage: Number(currentMovie.ratingsAverage) || 0,
-      isActive: Boolean(currentMovie.isActive)
+      status: currentMovie.status || 'upcoming', // Send the new status field
     };
     
+    // Delete the old isActive field if it exists
+    delete movieData.isActive;
+  
     // Don't send poster/posterPublicId unless they exist
     if (!movieData.poster) delete movieData.poster;
     if (!movieData.posterPublicId) delete movieData.posterPublicId;
@@ -358,14 +364,17 @@ export default function AdminMovies() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
+                      {/* --- UPDATED: Show status with 3 colors --- */}
                       <span
                         className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          movie.isActive
+                          movie.status === 'active'
                             ? 'bg-green-900/50 text-green-300 border border-green-700'
+                            : movie.status === 'upcoming'
+                            ? 'bg-blue-900/50 text-blue-300 border border-blue-700'
                             : 'bg-red-900/50 text-red-300 border border-red-700'
                         }`}
                       >
-                        {movie.isActive ? 'Active' : 'Inactive'}
+                        {movie.status ? (movie.status.charAt(0).toUpperCase() + movie.status.slice(1)) : 'N/A'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
@@ -481,20 +490,19 @@ export default function AdminMovies() {
             </div>
           )}
 
-          {/* Status Toggle */}
-          <div className="flex items-center pt-4">
-            <input
-              type="checkbox"
-              name="isActive"
-              id="isActive"
-              checked={currentMovie?.isActive || false}
-              onChange={(e) => setCurrentMovie(prev => ({ ...prev, isActive: e.target.checked }))}
-              className="h-4 w-4 text-brand bg-gray-900 border-gray-700 rounded focus:ring-brand"
-            />
-            <label htmlFor="isActive" className="ml-2 text-sm text-gray-300">
-              Is this movie currently active (now showing)?
-            </label>
-          </div>
+          {/* --- UPDATED: Status Dropdown --- */}
+          <FormInput 
+            label="Status" 
+            name="status" 
+            as="select" 
+            value={currentMovie?.status} 
+            onChange={handleFormChange}
+            required
+          >
+            <option value="upcoming">Upcoming</option>
+            <option value="active">Active (Now Showing)</option>
+            <option value="inactive">Inactive (Hidden)</option>
+          </FormInput>
           
           {/* Form Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">
