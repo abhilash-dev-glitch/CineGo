@@ -25,8 +25,21 @@ const app = express();
 app.use('/api/v1/webhooks', webhookRoutes);
 
 // Middleware
+// CORS configuration: allow one or more origins set via FRONTEND_URL (comma-separated)
+// Fallback to common localhost dev ports so local dev still works
+const rawFrontendUrls = process.env.FRONTEND_URL || 'http://localhost:5173,http://localhost:5174';
+const allowedOrigins = rawFrontendUrls.split(',').map((u) => u.trim()).filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Match your Vite port
+  origin: (origin, callback) => {
+    // Allow non-browser requests like curl or server-to-server by accepting undefined origin
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+    // Reject other origins -- browser will block request
+    return callback(new Error('CORS policy: Origin not allowed'), false);
+  },
   credentials: true, // Allow cookies to be sent
 }));
 app.use(express.json());
