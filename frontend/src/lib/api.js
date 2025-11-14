@@ -7,8 +7,15 @@ export const api = axios.create({
   withCredentials: true,
 })
 
-// Prevent cached 304 responses (especially for /auth/me) by disabling cache on GETs
+// Interceptor to add token from localStorage and prevent caching
 api.interceptors.request.use((config) => {
+  // Add token from localStorage if available (fallback for cross-domain cookie issues)
+  const token = localStorage.getItem('authToken')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  
+  // Prevent cached 304 responses (especially for /auth/me) by disabling cache on GETs
   if ((config.method || 'get').toLowerCase() === 'get') {
     const params = new URLSearchParams(config.params || {})
     params.set('_ts', Date.now().toString())
@@ -21,6 +28,24 @@ api.interceptors.request.use((config) => {
   }
   return config
 })
+
+// Interceptor to store token from response
+api.interceptors.response.use(
+  (response) => {
+    // Store token if present in response (from login/register)
+    if (response.data?.token) {
+      localStorage.setItem('authToken', response.data.token)
+    }
+    return response
+  },
+  (error) => {
+    // Clear token on 401 errors
+    if (error.response?.status === 401) {
+      localStorage.removeItem('authToken')
+    }
+    return Promise.reject(error)
+  }
+)
 
 export const MoviesAPI = {
   list: async (params) => {

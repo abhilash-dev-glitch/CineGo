@@ -47,8 +47,12 @@ export const register = createAsyncThunk(
 export const logout = createAsyncThunk('auth/logout', async () => {
   try {
     await api.post('/auth/logout');
+    // Clear token from localStorage
+    localStorage.removeItem('authToken');
   } catch (error) {
     console.error('Logout error:', error);
+    // Clear token even if logout request fails
+    localStorage.removeItem('authToken');
   }
 });
 
