@@ -282,7 +282,25 @@ exports.createBooking = async (req, res, next) => {
     showtimeDoc.availableSeats -= seats.length;
     await showtimeDoc.save();
 
-    // Release Redis locks when payment is completed (don't block on this)
+    // Send response immediately with basic booking data
+    res.status(201).json({
+      status: 'success',
+      data: {
+        booking: {
+          _id: booking._id,
+          user: booking.user,
+          showtime: booking.showtime,
+          seats: booking.seats,
+          totalAmount: booking.totalAmount,
+          paymentMethod: booking.paymentMethod,
+          paymentStatus: booking.paymentStatus,
+          bookingDate: booking.bookingDate,
+        },
+        lockExpiresIn: lockResult.expiresIn,
+      },
+    });
+
+    // Release Redis locks when payment is completed (async, after response)
     if (booking.paymentStatus === 'paid') {
       releaseSeats(
         booking.showtime.toString(),
@@ -293,8 +311,8 @@ exports.createBooking = async (req, res, next) => {
       });
     }
 
-    // Populate booking details
-    const populatedBooking = await Booking.findById(booking._id)
+    // Populate booking details for notifications (async, after response)
+    Booking.findById(booking._id)
       .populate('user', 'name email phone')
       .populate({
         path: 'showtime',
@@ -302,31 +320,26 @@ exports.createBooking = async (req, res, next) => {
           path: 'movie theater',
           select: 'title duration poster name location',
         },
+      })
+      .then(populatedBooking => {
+        // Send booking confirmation notification
+        sendBookingConfirmation(populatedBooking, req.user, { sms: true }).catch(err => {
+          console.error('Error sending booking confirmation:', err);
+        });
+
+        // Broadcast WebSocket event
+        try {
+          broadcast({
+            type: booking.paymentStatus === 'paid' ? 'BOOKING_PAID' : 'NEW_BOOKING',
+            data: populatedBooking,
+          });
+        } catch (err) {
+          console.error('Error broadcasting WebSocket event:', err);
+        }
+      })
+      .catch(err => {
+        console.error('Error populating booking for notifications:', err);
       });
-
-    // Send response immediately
-    res.status(201).json({
-      status: 'success',
-      data: {
-        booking: populatedBooking,
-        lockExpiresIn: lockResult.expiresIn,
-      },
-    });
-
-    // Send booking confirmation notification (async, after response)
-    sendBookingConfirmation(populatedBooking, req.user, { sms: true }).catch(err => {
-      console.error('Error sending booking confirmation:', err);
-    });
-
-    // Broadcast WebSocket event (after response)
-    try {
-      broadcast({
-        type: booking.paymentStatus === 'paid' ? 'BOOKING_PAID' : 'NEW_BOOKING',
-        data: populatedBooking,
-      });
-    } catch (err) {
-      console.error('Error broadcasting WebSocket event:', err);
-    }
   } catch (error) {
     next(error);
   }
