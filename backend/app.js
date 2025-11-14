@@ -30,10 +30,27 @@ app.use('/api/v1/webhooks', webhookRoutes);
 const rawFrontendUrls = process.env.FRONTEND_URL || 'http://localhost:5173,http://localhost:5174';
 const allowedOrigins = rawFrontendUrls.split(',').map((u) => u.trim()).filter(Boolean);
 
+// Optional permissive mode for debugging. Set FRONTEND_CORS_ALLOW_ALL=true in Render
+const allowAll = String(process.env.FRONTEND_CORS_ALLOW_ALL || '').toLowerCase() === 'true';
+
+// Small middleware to log origin and allowed origins when DEBUG_CORS is enabled
+if (String(process.env.DEBUG_CORS || '').toLowerCase() === 'true') {
+  app.use((req, res, next) => {
+    const incomingOrigin = req.headers.origin;
+    // eslint-disable-next-line no-console
+    console.log('[CORS DEBUG] Incoming Origin:', incomingOrigin);
+    // eslint-disable-next-line no-console
+    console.log('[CORS DEBUG] Allowed Origins:', allowedOrigins);
+    next();
+  });
+}
+
 app.use(cors({
   origin: (origin, callback) => {
     // Allow non-browser requests like curl or server-to-server by accepting undefined origin
     if (!origin) return callback(null, true);
+    // If permissive debug mode enabled, echo the origin back (temporarily)
+    if (allowAll) return callback(null, true);
     if (allowedOrigins.indexOf(origin) !== -1) {
       return callback(null, true);
     }
