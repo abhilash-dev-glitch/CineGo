@@ -216,16 +216,33 @@ exports.createBooking = async (req, res, next) => {
       );
     }
 
-    // Try to lock seats in Redis
-    const lockResult = await lockSeats(showtime, seats, req.user.id);
-    
-    if (!lockResult.success) {
-      return next(
-        new AppError(
-          `Some seats are temporarily locked by another user. Please try again.`,
-          409
+    // Try to lock seats in Redis (with timeout fallback)
+    let lockResult;
+    try {
+      lockResult = await Promise.race([
+        lockSeats(showtime, seats, req.user.id),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Redis timeout')), 3000)
         )
-      );
+      ]);
+      
+      if (!lockResult.success) {
+        return next(
+          new AppError(
+            `Some seats are temporarily locked by another user. Please try again.`,
+            409
+          )
+        );
+      }
+    } catch (error) {
+      console.warn('Seat locking failed or timed out, proceeding without lock:', error.message);
+      // Proceed without Redis locking if it fails/times out
+      lockResult = {
+        success: true,
+        lockedSeats: seats,
+        expiresIn: 600,
+        redisDisabled: true,
+      };
     }
 
     // Check if seats are already booked in database
