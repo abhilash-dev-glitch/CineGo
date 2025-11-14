@@ -12,7 +12,7 @@ const sendTokenResponse = (user, statusCode, res) => {
     ),
     httpOnly: true, // Prevents client-side JS from accessing the cookie
     secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-    sameSite: 'strict', // CSRF protection
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-site cookies in production
   };
 
   // Remove password from output
@@ -40,6 +40,8 @@ const clearTokenCookie = (res) => {
   res.cookie('token', 'none', {
     expires: new Date(Date.now() + 10 * 1000), // 10 seconds
     httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   });
 };
 
