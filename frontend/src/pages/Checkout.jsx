@@ -67,17 +67,42 @@ const CheckoutPage = () => {
         } catch (timeoutError) {
           console.warn('Booking request timed out, but booking may have been created');
           // Booking was likely created but response blocked by CORS
-          // Redirect to profile to see bookings
-          toast.success('Success', 'Payment successful! Redirecting to your bookings...');
-          setTimeout(() => navigate('/profile'), 2000);
+          // Fetch the most recent booking and redirect to it
+          toast.success('Success', 'Payment successful! Loading your booking...');
+          try {
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for DB to update
+            const bookings = await BookingAPI.myBookings();
+            if (bookings && bookings.length > 0) {
+              // Get the most recent booking
+              const latestBooking = bookings[0];
+              navigate(`/bookings/${latestBooking._id}`);
+            } else {
+              navigate('/profile?tab=bookings');
+            }
+          } catch (fetchError) {
+            console.error('Error fetching bookings:', fetchError);
+            navigate('/profile?tab=bookings');
+          }
           return;
         }
       }
 
       if (!createdBookingId) {
-        // Booking created but no ID returned - redirect to profile
-        toast.success('Success', 'Payment successful! Check your bookings in your profile.');
-        setTimeout(() => navigate('/profile'), 2000);
+        // Booking created but no ID returned - fetch latest booking
+        toast.success('Success', 'Payment successful! Loading your booking...');
+        try {
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for DB to update
+          const bookings = await BookingAPI.myBookings();
+          if (bookings && bookings.length > 0) {
+            const latestBooking = bookings[0];
+            navigate(`/bookings/${latestBooking._id}`);
+          } else {
+            navigate('/profile?tab=bookings');
+          }
+        } catch (fetchError) {
+          console.error('Error fetching bookings:', fetchError);
+          navigate('/profile?tab=bookings');
+        }
         return;
       }
 
@@ -90,8 +115,8 @@ const CheckoutPage = () => {
       
       // If it's a network error, booking might still have been created
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
-        toast.success('Payment Processed', 'Your booking is being processed. Check your profile for confirmation.');
-        setTimeout(() => navigate('/profile'), 2000);
+        toast.success('Payment Processed', 'Your booking is being processed. Redirecting to your bookings...');
+        setTimeout(() => navigate('/profile?tab=bookings'), 2000);
       } else {
         toast.error('Error', error.response?.data?.message || 'Failed to process booking. Please contact support.');
       }
