@@ -10,6 +10,7 @@ import {
   FiAlertCircle,
   FiX,
   FiVideo,
+  FiCheckCircle,
 } from 'react-icons/fi';
 
 // Modal and FormInput components would be ideal to abstract
@@ -224,6 +225,30 @@ export default function AdminShows() {
         console.error('Error deleting show:', err);
         toast.error('Failed to delete show', err.message);
       }
+    }
+  };
+
+  const handleReactivateShow = async (show) => {
+    try {
+      // Update the show's end date to extend it
+      const today = new Date();
+      const newEndDate = new Date(today);
+      newEndDate.setDate(today.getDate() + 7); // Extend by 7 days
+      
+      const showData = {
+        ...show,
+        movie: show.movie?._id,
+        theater: show.theater?._id,
+        endDate: newEndDate.toISOString(),
+        isActive: true,
+      };
+      
+      await adminService.updateShowtime(show._id, showData);
+      toast.success('Show reactivated successfully! Extended by 7 days.');
+      fetchAllData(); // Refresh list
+    } catch (err) {
+      console.error('Error reactivating show:', err);
+      toast.error('Failed to reactivate show', err.message);
     }
   };
 
@@ -455,13 +480,42 @@ export default function AdminShows() {
                       {type === 'expired' ? 'Expired' : type === 'active' ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                    <button onClick={() => handleOpenModal(show)} className="text-indigo-400 hover:text-indigo-300 transition-colors p-1" title="Edit Show">
-                      <FiEdit size={18} />
-                    </button>
-                    <button onClick={() => handleDelete(show._id)} className="text-red-500 hover:text-red-400 transition-colors p-1" title="Delete Show">
-                      <FiTrash2 size={18} />
-                    </button>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                    {type === 'expired' ? (
+                      <>
+                        <button 
+                          onClick={() => handleReactivateShow(show)} 
+                          className="text-green-400 hover:text-green-200 hover:bg-green-500/20 hover:scale-110 transition-all duration-200 p-2 rounded-lg hover:shadow-lg hover:shadow-green-500/50" 
+                          title="Reactivate Show (Extend by 7 days)"
+                        >
+                          <FiCheckCircle size={18} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(show._id)} 
+                          className="text-red-500 hover:text-red-200 hover:bg-red-500/20 hover:scale-110 transition-all duration-200 p-2 rounded-lg hover:shadow-lg hover:shadow-red-500/50" 
+                          title="Delete Show"
+                        >
+                          <FiTrash2 size={18} />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button 
+                          onClick={() => handleOpenModal(show)} 
+                          className="text-indigo-400 hover:text-indigo-200 hover:bg-indigo-500/20 hover:scale-110 transition-all duration-200 p-2 rounded-lg hover:shadow-lg hover:shadow-indigo-500/50" 
+                          title="Edit Show"
+                        >
+                          <FiEdit size={18} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(show._id)} 
+                          className="text-red-500 hover:text-red-200 hover:bg-red-500/20 hover:scale-110 transition-all duration-200 p-2 rounded-lg hover:shadow-lg hover:shadow-red-500/50" 
+                          title="Delete Show"
+                        >
+                          <FiTrash2 size={18} />
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}
