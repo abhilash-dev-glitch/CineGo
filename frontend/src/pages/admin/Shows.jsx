@@ -286,6 +286,17 @@ export default function AdminShows() {
     e.preventDefault();
     if (!currentShow) return;
 
+    // Validate required fields
+    if (!currentShow.movie || !currentShow.theater || !currentShow.screen) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    if (!currentShow.date || !currentShow.startTime || !currentShow.endTime || !currentShow.endDate) {
+      toast.error('Please fill in all date and time fields');
+      return;
+    }
+
     // Validate end date is not before start date
     if (new Date(currentShow.endDate) < new Date(currentShow.date)) {
       toast.error('End date cannot be before start date');
@@ -297,6 +308,13 @@ export default function AdminShows() {
     const endDateTime = new Date(`${currentShow.date}T${currentShow.endTime}`);
     const endDateOnly = new Date(currentShow.endDate);
 
+    // Validate dates are valid
+    if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime()) || isNaN(endDateOnly.getTime())) {
+      toast.error('Invalid date or time values');
+      console.error('Invalid dates:', { startDateTime, endDateTime, endDateOnly, currentShow });
+      return;
+    }
+
     const showData = {
       ...currentShow,
       startTime: startDateTime.toISOString(),
@@ -307,8 +325,11 @@ export default function AdminShows() {
       totalSeats: Number(currentShow.totalSeats),
     };
     
-    // Remove date field as it's merged into startTime/endTime
-    delete showData.date; 
+    // Remove temporary form fields
+    delete showData.date;
+    delete showData.startHour;
+    delete showData.startMinute;
+    delete showData.startPeriod; 
 
     try {
       if (currentShow._id) {
