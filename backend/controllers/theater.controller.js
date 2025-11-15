@@ -213,3 +213,99 @@ exports.getTheatersNearby = async (req, res, next) => {
     next(error);
   }
 };
+
+
+// @desc    Upload theater logo
+// @route   POST /api/v1/theaters/:id/logo
+// @access  Private/Admin
+exports.uploadTheaterLogo = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return next(new AppError('Please upload a file', 400));
+    }
+
+    // Get theater
+    const theater = await Theater.findById(req.params.id);
+    if (!theater) {
+      return next(new AppError('Theater not found', 404));
+    }
+
+    const { uploadBufferToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
+
+    // Delete old logo from Cloudinary if exists
+    if (theater.logo && theater.logoPublicId) {
+      try {
+        await deleteFromCloudinary(theater.logoPublicId);
+      } catch (error) {
+        console.error('Error deleting old logo:', error);
+      }
+    }
+
+    // Upload new logo to Cloudinary
+    const result = await uploadBufferToCloudinary(
+      req.file.buffer,
+      'movie-booking/theaters',
+      {
+        transformation: [
+          { width: 400, height: 400, crop: 'fill' },
+          { quality: 'auto' },
+        ],
+      }
+    );
+
+    // Update theater with new logo
+    theater.logo = result.url;
+    theater.logoPublicId = result.publicId;
+    await theater.save();
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Theater logo uploaded successfully',
+      data: {
+        logo: result.url,
+        logoPublicId: result.publicId,
+        theater,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Delete theater logo
+// @route   DELETE /api/v1/theaters/:id/logo
+// @access  Private/Admin
+exports.deleteTheaterLogo = async (req, res, next) => {
+  try {
+    const theater = await Theater.findById(req.params.id);
+    if (!theater) {
+      return next(new AppError('Theater not found', 404));
+    }
+
+    const { deleteFromCloudinary } = require('../config/cloudinary');
+
+    // Delete logo from Cloudinary if exists
+    if (theater.logo && theater.logoPublicId) {
+      try {
+        await deleteFromCloudinary(theater.logoPublicId);
+      } catch (error) {
+        console.error('Error deleting logo:', error);
+      }
+    }
+
+    // Remove logo from theater
+    theater.logo = undefined;
+    theater.logoPublicId = undefined;
+    await theater.save();
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Theater logo deleted successfully',
+      data: {
+        theater,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};

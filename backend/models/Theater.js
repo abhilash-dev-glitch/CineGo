@@ -42,6 +42,14 @@ const theaterSchema = new mongoose.Schema(
       },
     ],
     facilities: [String],
+    logo: {
+      type: String,
+      default: null,
+    },
+    logoPublicId: {
+      type: String,
+      default: null,
+    },
     contact: {
       phone: String,
       email: {
