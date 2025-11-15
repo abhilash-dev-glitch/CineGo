@@ -12,6 +12,7 @@ exports.getAdminStats = async (req, res, next) => {
   try {
     // 1. Get simple counts
     const totalUsersPromise = User.countDocuments();
+    const totalManagersPromise = User.countDocuments({ role: 'theaterManager' });
     const totalMoviesPromise = Movie.countDocuments();
     const totalTheatersPromise = Theater.countDocuments();
     
@@ -58,6 +59,7 @@ exports.getAdminStats = async (req, res, next) => {
     // Wait for all promises to resolve
     const [
       totalUsers,
+      totalManagers,
       totalMovies,
       totalTheaters,
       totalBookings,
@@ -66,6 +68,7 @@ exports.getAdminStats = async (req, res, next) => {
       revenueChartDataRaw
     ] = await Promise.all([
       totalUsersPromise,
+      totalManagersPromise,
       totalMoviesPromise,
       totalTheatersPromise,
       totalBookingsPromise,
@@ -92,6 +95,7 @@ exports.getAdminStats = async (req, res, next) => {
       status: 'success',
       data: {
         totalUsers,
+        totalManagers,
         totalMovies,
         totalTheaters,
         totalBookings,

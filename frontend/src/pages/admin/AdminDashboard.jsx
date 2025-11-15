@@ -47,6 +47,7 @@ export default function AdminDashboard() {
   const [error, setError] = useState(null);
   const [stats, setStats] = useState({
     totalUsers: 0,
+    totalManagers: 0,
     totalMovies: 0,
     totalBookings: 0,
     totalRevenue: 0,
@@ -65,22 +66,27 @@ export default function AdminDashboard() {
     },
     {
       title: 'Total Bookings',
-      value: formatNumber(stats.totalBookings),
+      value: stats.totalBookings,
       icon: <FiCalendar className="text-yellow-500" size={24} />,
     },
     {
       title: 'Total Users',
-      value: formatNumber(stats.totalUsers),
+      value: stats.totalUsers,
       icon: <FiUsers className="text-blue-500" size={24} />,
     },
     {
+      title: 'Total Managers',
+      value: stats.totalManagers,
+      icon: <FiUsers className="text-indigo-500" size={24} />,
+    },
+    {
       title: 'Total Movies',
-      value: formatNumber(stats.totalMovies),
+      value: stats.totalMovies,
       icon: <FiFilm className="text-green-500" size={24} />,
     },
     {
       title: 'Total Theaters',
-      value: formatNumber(stats.totalTheaters),
+      value: stats.totalTheaters,
       icon: <FiHome className="text-red-500" size={24} />,
     },
   ];
@@ -99,6 +105,7 @@ export default function AdminDashboard() {
 
       setStats({
         totalUsers: data.totalUsers,
+        totalManagers: data.totalManagers,
         totalMovies: data.totalMovies,
         totalTheaters: data.totalTheaters,
         totalBookings: data.totalBookings,
@@ -237,19 +244,17 @@ export default function AdminDashboard() {
   return (
     <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
         {statsData.map((stat, index) => (
           <div
             key={index}
-            className="bg-white rounded-xl shadow-sm p-6 flex items-start gap-4"
+            className="bg-white rounded-xl shadow-sm p-6 flex flex-col items-center text-center"
           >
-            <div className="p-3 rounded-lg bg-indigo-50 flex-shrink-0">
+            <div className="p-3 rounded-lg bg-indigo-50 mb-3">
               {stat.icon}
             </div>
-            <div className="flex flex-col justify-center flex-1 overflow-hidden">
-              <p className="text-sm text-gray-500 mb-1 whitespace-nowrap">{stat.title}</p>
-              <h3 className="text-xl font-bold text-gray-800 break-all" title={stat.value}>{stat.value}</h3>
-            </div>
+            <p className="text-sm text-gray-500 mb-2">{stat.title}</p>
+            <h3 className="text-2xl font-bold text-gray-800">{stat.value}</h3>
           </div>
         ))}
       </div>
