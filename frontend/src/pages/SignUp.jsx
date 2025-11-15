@@ -25,12 +25,22 @@ export default function SignUp(){
     if (!name.trim()) return 'Name is required';
     if (name.trim().length < 2) return 'Name must be at least 2 characters';
     if (name.trim().length > 50) return 'Name must not exceed 50 characters';
-    // Reject names that are only numbers
-    if (/^\d+$/.test(name.trim())) return 'Name cannot be only numbers';
-    // Require at least one letter
-    if (!/[a-zA-Z]/.test(name)) return 'Name must contain at least one letter';
-    // Reject names with special characters except spaces, hyphens, and apostrophes
-    if (!/^[a-zA-Z\s\-']+$/.test(name.trim())) return 'Name can only contain letters, spaces, hyphens, and apostrophes';
+    
+    const trimmedName = name.trim();
+    
+    // Get first 6 characters (or less if name is shorter)
+    const firstChars = trimmedName.substring(0, Math.min(6, trimmedName.length));
+    
+    // First 6 characters must be only letters (and spaces for multi-word names)
+    if (!/^[a-zA-Z\s]+$/.test(firstChars)) {
+      return 'First 6 characters must be letters only';
+    }
+    
+    // Overall name can only contain letters, spaces, numbers, hyphens, and apostrophes
+    if (!/^[a-zA-Z\s\-'0-9]+$/.test(trimmedName)) {
+      return 'Name can only contain letters, spaces, numbers, hyphens, and apostrophes';
+    }
+    
     return '';
   };
 

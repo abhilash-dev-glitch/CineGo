@@ -12,15 +12,18 @@ const userSchema = new mongoose.Schema(
       maxlength: [50, 'Name must not exceed 50 characters'],
       validate: {
         validator: function(v) {
-          // Must contain at least one letter
-          if (!/[a-zA-Z]/.test(v)) return false;
-          // Cannot be only numbers
-          if (/^\d+$/.test(v)) return false;
-          // Only letters, spaces, hyphens, and apostrophes allowed
-          if (!/^[a-zA-Z\s\-']+$/.test(v)) return false;
+          // Get first 6 characters (or less if name is shorter)
+          const firstChars = v.substring(0, Math.min(6, v.length));
+          
+          // First 6 characters must be only letters (and spaces for multi-word names)
+          if (!/^[a-zA-Z\s]+$/.test(firstChars)) return false;
+          
+          // Overall name can only contain letters, spaces, numbers, hyphens, and apostrophes
+          if (!/^[a-zA-Z\s\-'0-9]+$/.test(v)) return false;
+          
           return true;
         },
-        message: 'Name must contain letters and can only include spaces, hyphens, and apostrophes'
+        message: 'First 6 characters must be letters only. Name can contain letters, spaces, numbers, hyphens, and apostrophes'
       }
     },
     email: {
