@@ -90,7 +90,41 @@ export default function ManageShows() {
     setForm(prev => ({ ...prev, [key]: value }));
   };
 
-  // Update end time when start time changes to ensure it's after start time
+  // Auto-calculate end time based on movie duration and start time
+  useEffect(() => {
+    if (form.movie && form.startDate && form.startHour && form.startMinute && form.startPeriod) {
+      const selectedMovie = movies.find(m => m._id === form.movie);
+      if (selectedMovie && selectedMovie.duration) {
+        // Convert 12-hour to 24-hour format
+        let hour24 = parseInt(form.startHour);
+        if (form.startPeriod === 'PM' && hour24 !== 12) hour24 += 12;
+        if (form.startPeriod === 'AM' && hour24 === 12) hour24 = 0;
+        
+        // Create start datetime
+        const startDateTime = new Date(`${form.startDate}T${hour24.toString().padStart(2, '0')}:${form.startMinute}:00`);
+        
+        // Calculate end datetime
+        const endDateTime = new Date(startDateTime.getTime() + selectedMovie.duration * 60000);
+        
+        // Format for display
+        const endHour24 = endDateTime.getHours();
+        const endMinute = endDateTime.getMinutes();
+        const endHour12 = endHour24 % 12 || 12;
+        const endPeriod = endHour24 >= 12 ? 'PM' : 'AM';
+        const calculatedEndTime = `${endHour12}:${endMinute.toString().padStart(2, '0')} ${endPeriod}`;
+        
+        // Store both display format and ISO format
+        setForm(prev => ({
+          ...prev,
+          calculatedEndTime,
+          endTime: endDateTime.toISOString().slice(0, 16),
+          startTime: startDateTime.toISOString().slice(0, 16)
+        }));
+      }
+    }
+  }, [form.movie, form.startDate, form.startHour, form.startMinute, form.startPeriod, movies]);
+
+  // Old end time validation - keeping for backward compatibility
   useEffect(() => {
     if (form.startTime && form.endTime && new Date(form.endTime) <= new Date(form.startTime)) {
       // Add 2 hours as default duration
@@ -210,7 +244,18 @@ export default function ManageShows() {
         <button
           onClick={() => {
             setEditingShow(null);
-            setForm({ movie: '', screen: '', startTime: '', endTime: '', endDate: '', price: 200 });
+            setForm({ 
+              movie: '', 
+              screen: '', 
+              startDate: '', 
+              startHour: '12', 
+              startMinute: '00', 
+              startPeriod: 'PM',
+              startTime: '', 
+              endTime: '', 
+              endDate: '', 
+              price: 200 
+            });
             setIsFormOpen(!isFormOpen);
           }}
           className="flex items-center space-x-2 bg-brand hover:bg-brand/90 text-white px-4 py-2 rounded-lg transition-colors"
@@ -292,16 +337,55 @@ export default function ManageShows() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Start Date & Time</label>
+              <label className="block text-sm font-medium mb-1">Start Date</label>
               <input
-                type="datetime-local"
-                value={form.startTime}
-                onChange={(e) => set('startTime', e.target.value)}
+                type="date"
+                value={form.startDate || ''}
+                onChange={(e) => set('startDate', e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand/50 focus:border-brand/50 outline-none transition"
                 required
                 disabled={isLoading}
-                min={new Date().toISOString().slice(0, 16)}
+                min={new Date().toISOString().split('T')[0]}
               />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-1">Start Time</label>
+              <div className="grid grid-cols-3 gap-2">
+                <select
+                  value={form.startHour || '12'}
+                  onChange={(e) => set('startHour', e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand/50 outline-none"
+                  required
+                  disabled={isLoading}
+                >
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
+                <select
+                  value={form.startMinute || '00'}
+                  onChange={(e) => set('startMinute', e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand/50 outline-none"
+                  required
+                  disabled={isLoading}
+                >
+                  <option value="00">00</option>
+                  <option value="15">15</option>
+                  <option value="30">30</option>
+                  <option value="45">45</option>
+                </select>
+                <select
+                  value={form.startPeriod || 'PM'}
+                  onChange={(e) => set('startPeriod', e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand/50 outline-none"
+                  required
+                  disabled={isLoading}
+                >
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
             </div>
 
             <div>
@@ -323,16 +407,15 @@ export default function ManageShows() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">End Time (per show)</label>
-              <input
-                type="datetime-local"
-                value={form.endTime}
-                onChange={(e) => set('endTime', e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand/50 focus:border-brand/50 outline-none transition"
-                required
-                disabled={isLoading}
-                min={form.startTime || new Date().toISOString().slice(0, 16)}
-              />
+              <label className="block text-sm font-medium mb-1">End Time (auto-calculated)</label>
+              <div className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-gray-400">
+                {form.calculatedEndTime || 'Will be calculated based on movie duration'}
+              </div>
+              {form.movie && movies.find(m => m._id === form.movie) && (
+                <p className="text-xs text-gray-400 mt-1">
+                  Movie duration: {movies.find(m => m._id === form.movie).duration} minutes
+                </p>
+              )}
             </div>
 
             <div>
