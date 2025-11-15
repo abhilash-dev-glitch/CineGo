@@ -18,7 +18,10 @@ exports.getAllTheaters = async (req, res, next) => {
     // Populate showtimes to get insights for the admin panel
     const theaters = await features.query.populate({
       path: 'showtimes',
-      match: { startTime: { $gte: new Date() } }, // Only active/upcoming showtimes
+      match: { 
+        startTime: { $gte: new Date() }, // Only upcoming showtimes
+        isActive: true // Only active shows
+      },
       populate: [
         {
           path: 'movie',
