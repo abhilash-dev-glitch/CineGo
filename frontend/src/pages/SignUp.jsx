@@ -192,15 +192,18 @@ export default function SignUp(){
             value={form.name} 
             onChange={e=>set('name', e.target.value)}
             onBlur={() => handleBlur('name')}
-            className={`w-full bg-white/5 border rounded-lg px-3 py-2 ${
+            className={`w-full bg-white/5 border rounded-lg px-3 py-2 transition-colors ${
               touched.name && validationErrors.name 
-                ? 'border-red-500 focus:ring-red-500' 
-                : 'border-white/10 focus:ring-brand'
+                ? 'border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500' 
+                : 'border-white/10 focus:ring-2 focus:ring-brand/50 focus:border-brand'
             }`}
             required 
           />
           {touched.name && validationErrors.name && (
-            <p className="text-red-400 text-xs mt-1">{validationErrors.name}</p>
+            <p className="text-red-400 text-sm mt-1.5 flex items-start">
+              <span className="mr-1">⚠</span>
+              <span>{validationErrors.name}</span>
+            </p>
           )}
         </div>
         <div>
@@ -211,15 +214,18 @@ export default function SignUp(){
             value={form.email} 
             onChange={e=>set('email', e.target.value)}
             onBlur={() => handleBlur('email')}
-            className={`w-full bg-white/5 border rounded-lg px-3 py-2 ${
+            className={`w-full bg-white/5 border rounded-lg px-3 py-2 transition-colors ${
               touched.email && validationErrors.email 
-                ? 'border-red-500 focus:ring-red-500' 
-                : 'border-white/10 focus:ring-brand'
+                ? 'border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500' 
+                : 'border-white/10 focus:ring-2 focus:ring-brand/50 focus:border-brand'
             }`}
             required 
           />
           {touched.email && validationErrors.email && (
-            <p className="text-red-400 text-xs mt-1">{validationErrors.email}</p>
+            <p className="text-red-400 text-sm mt-1.5 flex items-start">
+              <span className="mr-1">⚠</span>
+              <span>{validationErrors.email}</span>
+            </p>
           )}
         </div>
         <div>
@@ -229,16 +235,19 @@ export default function SignUp(){
             value={form.phone} 
             onChange={e=>set('phone', e.target.value)}
             onBlur={() => handleBlur('phone')}
-            className={`w-full bg-white/5 border rounded-lg px-3 py-2 ${
+            className={`w-full bg-white/5 border rounded-lg px-3 py-2 transition-colors ${
               touched.phone && validationErrors.phone 
-                ? 'border-red-500 focus:ring-red-500' 
-                : 'border-white/10 focus:ring-brand'
+                ? 'border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500' 
+                : 'border-white/10 focus:ring-2 focus:ring-brand/50 focus:border-brand'
             }`}
             placeholder="e.g. +919876543210" 
             required 
           />
           {touched.phone && validationErrors.phone && (
-            <p className="text-red-400 text-xs mt-1">{validationErrors.phone}</p>
+            <p className="text-red-400 text-sm mt-1.5 flex items-start">
+              <span className="mr-1">⚠</span>
+              <span>{validationErrors.phone}</span>
+            </p>
           )}
         </div>
         <div>
@@ -249,16 +258,19 @@ export default function SignUp(){
             value={form.password} 
             onChange={e=>set('password', e.target.value)}
             onBlur={() => handleBlur('password')}
-            className={`w-full bg-white/5 border rounded-lg px-3 py-2 ${
+            className={`w-full bg-white/5 border rounded-lg px-3 py-2 transition-colors ${
               touched.password && validationErrors.password 
-                ? 'border-red-500 focus:ring-red-500' 
-                : 'border-white/10 focus:ring-brand'
+                ? 'border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500' 
+                : 'border-white/10 focus:ring-2 focus:ring-brand/50 focus:border-brand'
             }`}
             placeholder="Min 8 chars, 1 uppercase, 1 lowercase, 1 number" 
             required 
           />
           {touched.password && validationErrors.password && (
-            <p className="text-red-400 text-xs mt-1">{validationErrors.password}</p>
+            <p className="text-red-400 text-sm mt-1.5 flex items-start">
+              <span className="mr-1">⚠</span>
+              <span>{validationErrors.password}</span>
+            </p>
           )}
         </div>
         <div>
@@ -269,16 +281,19 @@ export default function SignUp(){
             value={confirmPassword} 
             onChange={e=>handleConfirmPasswordChange(e.target.value)}
             onBlur={() => handleBlur('confirmPassword')}
-            className={`w-full bg-white/5 border rounded-lg px-3 py-2 ${
+            className={`w-full bg-white/5 border rounded-lg px-3 py-2 transition-colors ${
               touched.confirmPassword && validationErrors.confirmPassword 
-                ? 'border-red-500 focus:ring-red-500' 
-                : 'border-white/10 focus:ring-brand'
+                ? 'border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500' 
+                : 'border-white/10 focus:ring-2 focus:ring-brand/50 focus:border-brand'
             }`}
             placeholder="Re-enter your password" 
             required 
           />
           {touched.confirmPassword && validationErrors.confirmPassword && (
-            <p className="text-red-400 text-xs mt-1">{validationErrors.confirmPassword}</p>
+            <p className="text-red-400 text-sm mt-1.5 flex items-start">
+              <span className="mr-1">⚠</span>
+              <span>{validationErrors.confirmPassword}</span>
+            </p>
           )}
         </div>
         <button disabled={loading} className="w-full px-4 py-2 rounded-md bg-brand hover:bg-brand-dark transition text-white">{loading? 'Creating...' : 'Create Account'}</button>
