@@ -31,17 +31,37 @@ export default function ManageShows() {
 
   const availableScreens = selectedTheater?.screens || [];
   
-  // Group shows by date for better organization
-  const showsByDate = useMemo(() => {
-    const grouped = {};
+  // Categorize shows into Now Showing, Upcoming, and Expired
+  const categorizedShows = useMemo(() => {
+    const now = new Date();
+    const today = format(now, 'yyyy-MM-dd');
+    
+    const nowShowing = {};
+    const upcoming = {};
+    const expired = {};
+    
     shows.forEach(show => {
-      const date = format(parseISO(show.startTime), 'yyyy-MM-dd');
-      if (!grouped[date]) {
-        grouped[date] = [];
+      const showDate = format(parseISO(show.startTime), 'yyyy-MM-dd');
+      const showEndTime = new Date(show.endTime);
+      
+      // Determine category
+      let category;
+      if (showDate === today && showEndTime > now) {
+        category = nowShowing;
+      } else if (showDate > today) {
+        category = upcoming;
+      } else {
+        category = expired;
       }
-      grouped[date].push(show);
+      
+      // Group by date within category
+      if (!category[showDate]) {
+        category[showDate] = [];
+      }
+      category[showDate].push(show);
     });
-    return grouped;
+    
+    return { nowShowing, upcoming, expired };
   }, [shows]);
 
   // Load shows for the selected theater
@@ -480,13 +500,7 @@ export default function ManageShows() {
       )}
 
       {/* Shows List */}
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold">
-            {loadingShows ? 'Loading shows...' : `Upcoming Shows (${shows.length})`}
-          </h3>
-        </div>
-
+      <div className="space-y-8">
         {loadingShows ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-brand"></div>
@@ -507,86 +521,260 @@ export default function ManageShows() {
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            {Object.entries(showsByDate).map(([date, dateShows]) => {
-              const showDate = parseISO(date);
-              const isPast = isAfter(new Date(), showDate);
-              
-              return (
-                <div key={date} className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
-                  <div className={`px-6 py-3 ${isPast ? 'bg-gray-800/50' : 'bg-brand/10'} border-b border-white/10`}>
-                    <h4 className="font-medium">
-                      {format(showDate, 'EEEE, MMMM d, yyyy')}
-                      {isPast && <span className="ml-2 text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded-full">Past</span>}
-                    </h4>
-                  </div>
-                  <div className="divide-y divide-white/5">
-                    {dateShows.map((show) => {
-                      const screen = availableScreens.find(s => s._id === show.screen);
-                      const isShowPast = isAfter(new Date(), new Date(show.endTime));
-                      
-                      return (
-                        <div key={show._id} className="p-4 hover:bg-white/2.5 transition-colors">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center space-x-3">
-                                <div className="flex-shrink-0 w-16 h-24 bg-gray-700 rounded-md overflow-hidden">
-                                  {show.movie?.poster ? (
-                                    <img 
-                                      src={show.movie.poster} 
-                                      alt={show.movie.title} 
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                                      <FiFilm className="h-6 w-6 text-gray-500" />
+          <>
+            {/* Now Showing Section */}
+            {Object.keys(categorizedShows.nowShowing).length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-lg font-semibold">Now Showing</h3>
+                  <span className="px-2 py-0.5 text-xs bg-green-600 text-white rounded-full">
+                    {Object.values(categorizedShows.nowShowing).flat().length}
+                  </span>
+                </div>
+                {Object.entries(categorizedShows.nowShowing).map(([date, dateShows]) => {
+                  const showDate = parseISO(date);
+                  
+                  return (
+                    <div key={date} className="bg-white/5 border border-green-500/30 rounded-xl overflow-hidden">
+                      <div className="px-6 py-3 bg-green-600/10 border-b border-white/10">
+                        <h4 className="font-medium">
+                          {format(showDate, 'EEEE, MMMM d, yyyy')}
+                          <span className="ml-2 text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">Today</span>
+                        </h4>
+                      </div>
+                      <div className="divide-y divide-white/5">
+                        {dateShows.map((show) => {
+                          const screen = availableScreens.find(s => s._id === show.screen);
+                          
+                          return (
+                            <div key={show._id} className="p-4 hover:bg-white/2.5 transition-colors">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="flex-shrink-0 w-16 h-24 bg-gray-700 rounded-md overflow-hidden">
+                                      {show.movie?.poster ? (
+                                        <img 
+                                          src={show.movie.poster} 
+                                          alt={show.movie.title} 
+                                          className="w-full h-full object-cover"
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                                          <FiFilm className="h-6 w-6 text-gray-500" />
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <h4 className="font-medium truncate">{show.movie?.title || 'Unknown Movie'}</h4>
-                                  <div className="flex flex-wrap items-center mt-1 text-sm text-gray-400 space-x-3">
-                                    <span className="flex items-center">
-                                      <FiClock className="mr-1.5 h-3.5 w-3.5" />
-                                      {format(parseISO(show.startTime), 'h:mm a')} - {format(parseISO(show.endTime), 'h:mm a')}
-                                    </span>
-                                    <span>•</span>
-                                    <span>{screen?.name || 'Screen N/A'}</span>
-                                    <span>•</span>
-                                    <span>₹{show.price}</span>
-                                    <span>•</span>
-                                    <span>{screen ? `${screen.capacity - (show.bookedSeats?.length || 0)}/${screen.capacity} seats` : 'Seats N/A'}</span>
+                                    <div className="min-w-0 flex-1">
+                                      <h4 className="font-medium truncate">{show.movie?.title || 'Unknown Movie'}</h4>
+                                      <div className="flex flex-wrap items-center mt-1 text-sm text-gray-400 space-x-3">
+                                        <span className="flex items-center">
+                                          <FiClock className="mr-1.5 h-3.5 w-3.5" />
+                                          {format(parseISO(show.startTime), 'h:mm a')} - {format(parseISO(show.endTime), 'h:mm a')}
+                                        </span>
+                                        <span>•</span>
+                                        <span>{screen?.name || 'Screen N/A'}</span>
+                                        <span>•</span>
+                                        <span>₹{show.price}</span>
+                                        <span>•</span>
+                                        <span>{screen ? `${screen.capacity - (show.bookedSeats?.length || 0)}/${screen.capacity} seats` : 'Seats N/A'}</span>
+                                      </div>
+                                    </div>
                                   </div>
+                                </div>
+                                <div className="ml-4 flex-shrink-0 flex items-center space-x-2">
+                                  <button
+                                    onClick={() => startEdit(show)}
+                                    className="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-900/30 rounded-full transition-colors"
+                                    title="Edit show"
+                                    disabled={isLoading}
+                                  >
+                                    <FiEdit2 className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => remove(show._id)}
+                                    className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded-full transition-colors"
+                                    title="Delete show"
+                                    disabled={isLoading}
+                                  >
+                                    <FiTrash2 className="h-4 w-4" />
+                                  </button>
                                 </div>
                               </div>
                             </div>
-                            <div className="ml-4 flex-shrink-0 flex items-center space-x-2">
-                              <button
-                                onClick={() => startEdit(show)}
-                                className="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-900/30 rounded-full transition-colors"
-                                title="Edit show"
-                                disabled={isLoading}
-                              >
-                                <FiEdit2 className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => remove(show._id)}
-                                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded-full transition-colors"
-                                title="Delete show"
-                                disabled={isLoading}
-                              >
-                                <FiTrash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Upcoming Shows Section */}
+            {Object.keys(categorizedShows.upcoming).length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-lg font-semibold">Upcoming Shows</h3>
+                  <span className="px-2 py-0.5 text-xs bg-brand text-white rounded-full">
+                    {Object.values(categorizedShows.upcoming).flat().length}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
+                {Object.entries(categorizedShows.upcoming).map(([date, dateShows]) => {
+                  const showDate = parseISO(date);
+                  
+                  return (
+                    <div key={date} className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+                      <div className="px-6 py-3 bg-brand/10 border-b border-white/10">
+                        <h4 className="font-medium">
+                          {format(showDate, 'EEEE, MMMM d, yyyy')}
+                        </h4>
+                      </div>
+                      <div className="divide-y divide-white/5">
+                        {dateShows.map((show) => {
+                          const screen = availableScreens.find(s => s._id === show.screen);
+                          
+                          return (
+                            <div key={show._id} className="p-4 hover:bg-white/2.5 transition-colors">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="flex-shrink-0 w-16 h-24 bg-gray-700 rounded-md overflow-hidden">
+                                      {show.movie?.poster ? (
+                                        <img 
+                                          src={show.movie.poster} 
+                                          alt={show.movie.title} 
+                                          className="w-full h-full object-cover"
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                                          <FiFilm className="h-6 w-6 text-gray-500" />
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <h4 className="font-medium truncate">{show.movie?.title || 'Unknown Movie'}</h4>
+                                      <div className="flex flex-wrap items-center mt-1 text-sm text-gray-400 space-x-3">
+                                        <span className="flex items-center">
+                                          <FiClock className="mr-1.5 h-3.5 w-3.5" />
+                                          {format(parseISO(show.startTime), 'h:mm a')} - {format(parseISO(show.endTime), 'h:mm a')}
+                                        </span>
+                                        <span>•</span>
+                                        <span>{screen?.name || 'Screen N/A'}</span>
+                                        <span>•</span>
+                                        <span>₹{show.price}</span>
+                                        <span>•</span>
+                                        <span>{screen ? `${screen.capacity - (show.bookedSeats?.length || 0)}/${screen.capacity} seats` : 'Seats N/A'}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="ml-4 flex-shrink-0 flex items-center space-x-2">
+                                  <button
+                                    onClick={() => startEdit(show)}
+                                    className="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-900/30 rounded-full transition-colors"
+                                    title="Edit show"
+                                    disabled={isLoading}
+                                  >
+                                    <FiEdit2 className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => remove(show._id)}
+                                    className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded-full transition-colors"
+                                    title="Delete show"
+                                    disabled={isLoading}
+                                  >
+                                    <FiTrash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Expired Shows Section */}
+            {Object.keys(categorizedShows.expired).length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-lg font-semibold text-gray-400">Expired Shows</h3>
+                  <span className="px-2 py-0.5 text-xs bg-gray-700 text-gray-300 rounded-full">
+                    {Object.values(categorizedShows.expired).flat().length}
+                  </span>
+                </div>
+                {Object.entries(categorizedShows.expired).map(([date, dateShows]) => {
+                  const showDate = parseISO(date);
+                  
+                  return (
+                    <div key={date} className="bg-white/5 border border-gray-700/50 rounded-xl overflow-hidden opacity-60">
+                      <div className="px-6 py-3 bg-gray-800/50 border-b border-white/10">
+                        <h4 className="font-medium text-gray-400">
+                          {format(showDate, 'EEEE, MMMM d, yyyy')}
+                          <span className="ml-2 text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded-full">Expired</span>
+                        </h4>
+                      </div>
+                      <div className="divide-y divide-white/5">
+                        {dateShows.map((show) => {
+                          const screen = availableScreens.find(s => s._id === show.screen);
+                          
+                          return (
+                            <div key={show._id} className="p-4 hover:bg-white/2.5 transition-colors">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="flex-shrink-0 w-16 h-24 bg-gray-700 rounded-md overflow-hidden">
+                                      {show.movie?.poster ? (
+                                        <img 
+                                          src={show.movie.poster} 
+                                          alt={show.movie.title} 
+                                          className="w-full h-full object-cover grayscale"
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                                          <FiFilm className="h-6 w-6 text-gray-500" />
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <h4 className="font-medium truncate text-gray-400">{show.movie?.title || 'Unknown Movie'}</h4>
+                                      <div className="flex flex-wrap items-center mt-1 text-sm text-gray-500 space-x-3">
+                                        <span className="flex items-center">
+                                          <FiClock className="mr-1.5 h-3.5 w-3.5" />
+                                          {format(parseISO(show.startTime), 'h:mm a')} - {format(parseISO(show.endTime), 'h:mm a')}
+                                        </span>
+                                        <span>•</span>
+                                        <span>{screen?.name || 'Screen N/A'}</span>
+                                        <span>•</span>
+                                        <span>₹{show.price}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="ml-4 flex-shrink-0 flex items-center space-x-2">
+                                  <button
+                                    onClick={() => remove(show._id)}
+                                    className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded-full transition-colors"
+                                    title="Delete show"
+                                    disabled={isLoading}
+                                  >
+                                    <FiTrash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
