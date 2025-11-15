@@ -105,12 +105,13 @@ export default function ManagerMovies() {
           {filteredMovies.map((movie) => {
             const movieShows = getMovieShows(movie);
             const upcomingShows = movieShows.filter(show => new Date(show.startTime) > new Date());
+            const isExpired = upcomingShows.length === 0;
             
             return (
-              <div key={movie._id} className="bg-white/5 border border-white/10 rounded-xl overflow-hidden hover:border-brand/50 transition-all">
+              <div key={movie._id} className={`bg-white/5 border rounded-xl overflow-hidden hover:border-brand/50 transition-all ${isExpired ? 'border-gray-600 opacity-75' : 'border-white/10'}`}>
                 <div className="flex">
                   {/* Movie Poster */}
-                  <div className="flex-shrink-0 w-32 h-48 bg-gray-700">
+                  <div className="flex-shrink-0 w-32 h-48 bg-gray-700 relative">
                     {movie.poster ? (
                       <img 
                         src={movie.poster} 
@@ -122,11 +123,23 @@ export default function ManagerMovies() {
                         <FiFilm className="h-12 w-12 text-gray-500" />
                       </div>
                     )}
+                    {isExpired && (
+                      <div className="absolute top-2 left-2 bg-red-600 text-white text-xs font-semibold px-2 py-1 rounded">
+                        EXPIRED
+                      </div>
+                    )}
                   </div>
 
                   {/* Movie Details */}
                   <div className="flex-1 p-4">
-                    <h3 className="text-lg font-semibold text-white mb-2">{movie.title}</h3>
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="text-lg font-semibold text-white">{movie.title}</h3>
+                      {isExpired && (
+                        <span className="ml-2 px-2 py-1 bg-red-600/20 text-red-400 text-xs font-semibold rounded-full">
+                          No upcoming shows
+                        </span>
+                      )}
+                    </div>
                     
                     <div className="space-y-2 text-sm text-gray-300">
                       <div className="flex items-center space-x-2">
@@ -199,8 +212,8 @@ export default function ManagerMovies() {
                   </div>
                 )}
 
-                {/* Next Show Info */}
-                {upcomingShows.length > 0 && (
+                {/* Next Show Info or Expired Status */}
+                {upcomingShows.length > 0 ? (
                   <div className="px-4 py-3 bg-brand/10 border-t border-white/10">
                     <p className="text-xs text-gray-400 mb-1">Next show:</p>
                     <p className="text-sm text-white">
@@ -208,6 +221,13 @@ export default function ManagerMovies() {
                       {upcomingShows[0].theaterName && selectedTheater === 'all' && (
                         <span className="text-gray-400"> • {upcomingShows[0].theaterName}</span>
                       )}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="px-4 py-3 bg-red-600/10 border-t border-red-600/20">
+                    <p className="text-xs text-red-400 mb-1">All shows expired</p>
+                    <p className="text-sm text-gray-400">
+                      Last show: {format(new Date(movieShows[0].startTime), 'MMM d, yyyy • h:mm a')}
                     </p>
                   </div>
                 )}
