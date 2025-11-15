@@ -28,17 +28,19 @@ export default function SignUp(){
     
     const trimmedName = name.trim();
     
-    // Get first 6 characters (or less if name is shorter)
-    const firstChars = trimmedName.substring(0, Math.min(6, trimmedName.length));
-    
-    // First 6 characters must be only letters (and spaces for multi-word names)
-    if (!/^[a-zA-Z\s]+$/.test(firstChars)) {
-      return 'First 6 characters must be letters only';
+    // Name can only contain letters and spaces
+    if (!/^[a-zA-Z\s]+$/.test(trimmedName)) {
+      return 'Name can only contain letters and spaces';
     }
     
-    // Overall name can only contain letters, spaces, numbers, hyphens, and apostrophes
-    if (!/^[a-zA-Z\s\-'0-9]+$/.test(trimmedName)) {
-      return 'Name can only contain letters, spaces, numbers, hyphens, and apostrophes';
+    // Check for multiple consecutive spaces
+    if (/\s{2,}/.test(trimmedName)) {
+      return 'Name cannot contain multiple consecutive spaces';
+    }
+    
+    // Name cannot start or end with a space (already handled by trim, but double-check)
+    if (trimmedName !== name.trim()) {
+      return 'Name cannot start or end with spaces';
     }
     
     return '';
