@@ -16,6 +16,7 @@ import {
   FiVideo,
   FiStar,
   FiTrendingUp,
+  FiCheckCircle,
 } from 'react-icons/fi';
 
 // Reusable Modal Component
@@ -84,6 +85,7 @@ export default function AdminMovies() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentMovie, setCurrentMovie] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showInactive, setShowInactive] = useState(false);
 
   // Load all movies on component mount
   const fetchMovies = async () => {
@@ -161,6 +163,17 @@ export default function AdminMovies() {
         console.error('Error deleting movie:', err);
         toast.error('Failed to delete movie', err.message);
       }
+    }
+  };
+
+  const handleQuickStatusChange = async (movieId, newStatus) => {
+    try {
+      await adminService.updateMovie(movieId, { status: newStatus });
+      toast.success(`Movie status changed to ${newStatus}`);
+      fetchMovies(); // Refresh list
+    } catch (err) {
+      console.error('Error updating movie status:', err);
+      toast.error('Failed to update movie status', err.message);
     }
   };
 
@@ -279,43 +292,61 @@ export default function AdminMovies() {
       );
     }
 
+    // Separate active and inactive movies
+    const activeMovies = movies.filter(m => m.status !== 'inactive');
+    const inactiveMovies = movies.filter(m => m.status === 'inactive');
+
     return (
-      <div className="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-700">
-            <thead className="bg-gray-800">
-              <tr>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-200 uppercase tracking-wider"
-                >
-                  Movie
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-200 uppercase tracking-wider"
-                >
-                  Stats
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-200 uppercase tracking-wider"
-                >
-                  Insights
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-200 uppercase tracking-wider"
-                >
-                  Status
-                </th>
-                <th scope="col" className="relative px-6 py-3">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-gray-800/50 divide-y divide-gray-700">
-              {movies.map((movie) => {
+      <>
+        {/* Active Movies Table */}
+        <div className="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
+          <div className="px-6 py-3 bg-gray-800 border-b border-gray-700">
+            <h3 className="text-sm font-semibold text-gray-200 uppercase">
+              Active & Upcoming Movies ({activeMovies.length})
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-700">
+              <thead className="bg-gray-800">
+                <tr>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-200 uppercase tracking-wider"
+                  >
+                    Movie
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-200 uppercase tracking-wider"
+                  >
+                    Stats
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-200 uppercase tracking-wider"
+                  >
+                    Insights
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-200 uppercase tracking-wider"
+                  >
+                    Status
+                  </th>
+                  <th scope="col" className="relative px-6 py-3">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-gray-800/50 divide-y divide-gray-700">
+                {activeMovies.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-8 text-center text-gray-400">
+                      No active movies found
+                    </td>
+                  </tr>
+                ) : (
+                  activeMovies.map((movie) => {
                 // Calculate insights from populated data
                 const theaters = [...new Set((movie.showtimes || []).map(s => s.theater?.name).filter(Boolean))];
                 const totalBookings = (movie.showtimes || []).reduce((acc, show) => acc + (show.bookingCount || 0), 0);
@@ -414,11 +445,163 @@ export default function AdminMovies() {
                     </td>
                   </tr>
                 );
-              })}
+              })
+                )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Inactive Movies Section */}
+      {inactiveMovies.length > 0 && (
+        <div className="mt-6 bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setShowInactive(!showInactive)}
+            className="w-full px-6 py-4 bg-gray-800 border-b border-gray-700 flex items-center justify-between hover:bg-gray-750 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <h3 className="text-sm font-semibold text-gray-200 uppercase">
+                Inactive Movies ({inactiveMovies.length})
+              </h3>
+              <span className="px-2 py-1 bg-red-900/30 text-red-400 text-xs rounded-full">
+                All shows expired
+              </span>
+            </div>
+            <svg
+              className={`w-5 h-5 text-gray-400 transition-transform ${showInactive ? 'rotate-180' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showInactive && (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-700">
+                <thead className="bg-gray-800">
+                  <tr>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-200 uppercase tracking-wider"
+                    >
+                      Movie
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-200 uppercase tracking-wider"
+                    >
+                      Stats
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-200 uppercase tracking-wider"
+                    >
+                      Insights
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-200 uppercase tracking-wider"
+                    >
+                      Status
+                    </th>
+                    <th scope="col" className="relative px-6 py-3">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-gray-800/50 divide-y divide-gray-700">
+                  {inactiveMovies.map((movie) => {
+                    const theaters = [...new Set((movie.showtimes || []).map(s => s.theater?.name).filter(Boolean))];
+                    const totalBookings = (movie.showtimes || []).reduce((acc, show) => acc + (show.bookingCount || 0), 0);
+                    const upcomingShows = (movie.showtimes || []).filter(show => new Date(show.startTime) > new Date());
+                    const isExpired = movie.showtimes && movie.showtimes.length > 0 && upcomingShows.length === 0;
+
+                    return (
+                      <tr key={movie._id} className="hover:bg-gray-700/50 transition-colors opacity-60">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-24 w-16 relative">
+                              <img
+                                className="h-24 w-16 rounded-md object-cover border border-gray-700"
+                                src={movie.poster || 'https://placehold.co/128x176/1f2937/9ca3af?text=No+Poster'}
+                                alt={movie.title}
+                              />
+                              <div className="absolute top-1 left-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                                EXPIRED
+                              </div>
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-white">{movie.title}</div>
+                              <div className="text-sm text-gray-300">{movie.director}</div>
+                              <div className="text-xs text-gray-300 mt-1">{movie.language}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center text-sm text-gray-300 mb-1">
+                            <FiClock className="w-4 h-4 mr-2 text-gray-400" />
+                            {movie.duration} mins
+                          </div>
+                          <div className="flex items-center text-sm text-gray-300">
+                            <FiStar className="w-4 h-4 mr-2 text-yellow-500" />
+                            {movie.ratingsAverage?.toFixed(1) || 'N/A'} ({movie.ratingsCount || 0})
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center text-sm text-gray-300 mb-1">
+                            <FiVideo className="w-4 h-4 mr-2 text-blue-400" />
+                            {(movie.showtimes || []).length} Show{(movie.showtimes || []).length !== 1 ? 's' : ''}
+                            <span className="ml-2 text-red-400">(all expired)</span>
+                          </div>
+                          <div className="flex items-center text-sm text-gray-300 mb-1">
+                            <FiTrendingUp className="w-4 h-4 mr-2 text-green-500" />
+                            {totalBookings} Booking{totalBookings !== 1 ? 's' : ''}
+                          </div>
+                          <div className="flex items-center text-sm text-gray-300">
+                            <FiHome className="w-4 h-4 mr-2 text-purple-400" />
+                            {theaters.length} Theater{theaters.length !== 1 ? 's' : ''}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-900/50 text-red-300 border border-red-700">
+                            Inactive
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                          <button
+                            onClick={() => handleQuickStatusChange(movie._id, 'active')}
+                            className="text-green-400 hover:text-green-300 transition-colors p-1"
+                            title="Reactivate Movie"
+                          >
+                            <FiCheckCircle size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleOpenModal(movie)}
+                            className="text-indigo-400 hover:text-indigo-300 transition-colors p-1"
+                            title="Edit Movie"
+                          >
+                            <FiEdit size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(movie._id)}
+                            className="text-red-500 hover:text-red-400 transition-colors p-1"
+                            title="Delete Movie"
+                          >
+                            <FiTrash2 size={18} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </>
     );
   };
 
