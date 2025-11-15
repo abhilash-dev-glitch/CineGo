@@ -17,6 +17,7 @@ import {
   FiStar,
   FiTrendingUp,
   FiCheckCircle,
+  FiXCircle,
 } from 'react-icons/fi';
 
 // Reusable Modal Component
@@ -433,17 +434,24 @@ export default function AdminMovies() {
                         {movie.status ? (movie.status.charAt(0).toUpperCase() + movie.status.slice(1)) : 'N/A'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                      <button
+                        onClick={() => handleQuickStatusChange(movie._id, 'inactive')}
+                        className="text-orange-400 hover:text-orange-200 hover:bg-orange-500/20 hover:scale-110 transition-all duration-200 p-2 rounded-lg hover:shadow-lg hover:shadow-orange-500/50"
+                        title="Mark as Inactive"
+                      >
+                        <FiXCircle size={18} />
+                      </button>
                       <button
                         onClick={() => handleOpenModal(movie)}
-                        className="text-indigo-400 hover:text-indigo-300 transition-colors p-1"
+                        className="text-indigo-400 hover:text-indigo-200 hover:bg-indigo-500/20 hover:scale-110 transition-all duration-200 p-2 rounded-lg hover:shadow-lg hover:shadow-indigo-500/50"
                         title="Edit Movie"
                       >
                         <FiEdit size={18} />
                       </button>
                       <button
                         onClick={() => handleDelete(movie._id)}
-                        className="text-red-500 hover:text-red-400 transition-colors p-1"
+                        className="text-red-500 hover:text-red-200 hover:bg-red-500/20 hover:scale-110 transition-all duration-200 p-2 rounded-lg hover:shadow-lg hover:shadow-red-500/50"
                         title="Delete Movie"
                       >
                         <FiTrash2 size={18} />
