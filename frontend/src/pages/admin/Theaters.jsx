@@ -372,10 +372,27 @@ export default function AdminTheaters() {
                 return (
                   <tr key={theater._id} className="hover:bg-gray-700/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-white">{theater.name}</div>
-                      <div className="text-sm text-gray-300 flex items-center mt-1">
-                        <FiMapPin className="w-4 h-4 mr-1.5 text-gray-400" />
-                        {theater.city}
+                      <div className="flex items-center gap-3">
+                        {/* Theater Logo */}
+                        <div className="flex-shrink-0 w-12 h-12 bg-gray-900 border border-gray-700 rounded-lg flex items-center justify-center overflow-hidden">
+                          {theater.logo ? (
+                            <img 
+                              src={theater.logo} 
+                              alt={theater.name}
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <FiHome className="w-6 h-6 text-gray-600" />
+                          )}
+                        </div>
+                        {/* Theater Info */}
+                        <div>
+                          <div className="text-sm font-medium text-white">{theater.name}</div>
+                          <div className="text-sm text-gray-300 flex items-center mt-1">
+                            <FiMapPin className="w-4 h-4 mr-1.5 text-gray-400" />
+                            {theater.city}
+                          </div>
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
