@@ -11,6 +11,7 @@ import {
   FiX,
   FiVideo,
   FiCheckCircle,
+  FiXCircle,
 } from 'react-icons/fi';
 
 // Modal and FormInput components would be ideal to abstract
@@ -252,6 +253,24 @@ export default function AdminShows() {
     }
   };
 
+  const handleToggleShowStatus = async (show, newStatus) => {
+    try {
+      const showData = {
+        ...show,
+        movie: show.movie?._id,
+        theater: show.theater?._id,
+        isActive: newStatus,
+      };
+      
+      await adminService.updateShowtime(show._id, showData);
+      toast.success(`Show ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+      fetchAllData(); // Refresh list
+    } catch (err) {
+      console.error('Error updating show status:', err);
+      toast.error('Failed to update show status', err.message);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!currentShow) return;
@@ -389,8 +408,8 @@ export default function AdminShows() {
         {activeShows.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="h-2 w-2 rounded-full bg-green-500"></div>
-              <h2 className="text-xl font-semibold text-white">Active Shows ({activeShows.length})</h2>
+              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+              <h2 className="text-xl font-semibold text-green-400">Active Shows ({activeShows.length})</h2>
             </div>
             {renderShowTable(activeShows, 'active')}
           </div>
@@ -401,7 +420,7 @@ export default function AdminShows() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <div className="h-2 w-2 rounded-full bg-gray-500"></div>
-              <h2 className="text-xl font-semibold text-white">Inactive Shows ({inactiveShows.length})</h2>
+              <h2 className="text-xl font-semibold text-gray-400">Inactive Shows ({inactiveShows.length})</h2>
             </div>
             {renderShowTable(inactiveShows, 'inactive')}
           </div>
@@ -411,8 +430,8 @@ export default function AdminShows() {
         {expiredShows.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="h-2 w-2 rounded-full bg-red-500"></div>
-              <h2 className="text-xl font-semibold text-white">Expired Shows ({expiredShows.length})</h2>
+              <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
+              <h2 className="text-xl font-semibold text-red-400">Expired Shows ({expiredShows.length})</h2>
             </div>
             {renderShowTable(expiredShows, 'expired')}
           </div>
@@ -498,8 +517,39 @@ export default function AdminShows() {
                           <FiTrash2 size={18} />
                         </button>
                       </>
+                    ) : type === 'active' ? (
+                      <>
+                        <button 
+                          onClick={() => handleToggleShowStatus(show, false)} 
+                          className="text-orange-400 hover:text-orange-200 hover:bg-orange-500/20 hover:scale-110 transition-all duration-200 p-2 rounded-lg hover:shadow-lg hover:shadow-orange-500/50" 
+                          title="Mark as Inactive"
+                        >
+                          <FiXCircle size={18} />
+                        </button>
+                        <button 
+                          onClick={() => handleOpenModal(show)} 
+                          className="text-indigo-400 hover:text-indigo-200 hover:bg-indigo-500/20 hover:scale-110 transition-all duration-200 p-2 rounded-lg hover:shadow-lg hover:shadow-indigo-500/50" 
+                          title="Edit Show"
+                        >
+                          <FiEdit size={18} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(show._id)} 
+                          className="text-red-500 hover:text-red-200 hover:bg-red-500/20 hover:scale-110 transition-all duration-200 p-2 rounded-lg hover:shadow-lg hover:shadow-red-500/50" 
+                          title="Delete Show"
+                        >
+                          <FiTrash2 size={18} />
+                        </button>
+                      </>
                     ) : (
                       <>
+                        <button 
+                          onClick={() => handleToggleShowStatus(show, true)} 
+                          className="text-green-400 hover:text-green-200 hover:bg-green-500/20 hover:scale-110 transition-all duration-200 p-2 rounded-lg hover:shadow-lg hover:shadow-green-500/50" 
+                          title="Mark as Active"
+                        >
+                          <FiCheckCircle size={18} />
+                        </button>
                         <button 
                           onClick={() => handleOpenModal(show)} 
                           className="text-indigo-400 hover:text-indigo-200 hover:bg-indigo-500/20 hover:scale-110 transition-all duration-200 p-2 rounded-lg hover:shadow-lg hover:shadow-indigo-500/50" 
