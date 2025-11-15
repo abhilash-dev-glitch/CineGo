@@ -257,13 +257,15 @@ export default function AdminShows() {
   const isShowExpired = (show) => {
     if (!show.endDate) return false;
     
-    // Get current date at start of day (midnight)
+    // Get current date and time
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
     // Parse the end date and set to end of that day (23:59:59)
     const endDate = new Date(show.endDate);
     const endOfDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999);
+    
+    // Debug logging
+    console.log('Show:', show.movie?.title, 'End Date:', show.endDate, 'End of Day:', endOfDay, 'Now:', now, 'Is Expired:', endOfDay < now);
     
     // Show is expired if the end of the end date has passed
     return endOfDay < now;
