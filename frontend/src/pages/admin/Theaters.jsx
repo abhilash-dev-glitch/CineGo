@@ -16,6 +16,7 @@ import {
   FiGrid,
   FiPlusCircle,
   FiMinusCircle,
+  FiUpload,
 } from 'react-icons/fi';
 
 // Reusable Modal Component
@@ -84,6 +85,7 @@ export default function AdminTheaters() {
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentTheater, setCurrentTheater] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Load all theaters on component mount
   const fetchTheaters = async () => {
@@ -167,6 +169,30 @@ export default function AdminTheaters() {
         console.error('Error deleting theater:', err);
         toast.error('Failed to delete theater', err.message);
       }
+    }
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!currentTheater?._id) {
+      toast.error('Please save the theater first', 'You must create and save the theater before uploading a logo.');
+      return;
+    }
+    
+    setIsUploading(true);
+    try {
+      const data = await adminService.uploadTheaterLogo(currentTheater._id, file);
+      // Update current theater in modal and the main list
+      setCurrentTheater((prev) => ({ ...prev, logo: data.logo, logoPublicId: data.logoPublicId }));
+      setTheaters(prevTheaters => prevTheaters.map(t => t._id === currentTheater._id ? { ...t, logo: data.logo, logoPublicId: data.logoPublicId } : t));
+      toast.success('Logo uploaded successfully!');
+    } catch (err) {
+      console.error('Error uploading logo:', err);
+      toast.error('Logo upload failed', err.message);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -457,6 +483,53 @@ export default function AdminTheaters() {
           </div>
 
           <FormInput label="Facilities (comma-separated)" name="facilities" value={currentTheater?.facilities} onChange={handleFormChange} placeholder="e.g. Parking, 3D, IMAX" />
+
+          {/* Logo Upload - Only for existing theaters */}
+          {currentTheater?._id && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">Theater Logo</label>
+              <div className="flex items-center gap-4">
+                <div className="w-24 h-24 bg-gray-900 border border-gray-700 rounded-lg flex items-center justify-center overflow-hidden">
+                  {currentTheater.logo ? (
+                    <img 
+                      src={currentTheater.logo} 
+                      alt="Theater Logo" 
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <FiHome className="w-12 h-12 text-gray-600" />
+                  )}
+                </div>
+                <label className="relative cursor-pointer flex items-center px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors">
+                  {isUploading ? (
+                    <FiLoader className="animate-spin w-5 h-5 mr-2" />
+                  ) : (
+                    <FiUpload className="w-5 h-5 mr-2" />
+                  )}
+                  {isUploading ? 'Uploading...' : 'Change Logo'}
+                  <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} disabled={isUploading} />
+                </label>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">Uploading a new logo will replace the old one and save immediately.</p>
+            </div>
+          )}
+          
+          {/* Logo Upload - For NEW theaters (disabled until saved) */}
+          {!currentTheater?._id && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">Theater Logo</label>
+              <div className="flex items-center gap-4">
+                <div className="w-24 h-24 bg-gray-900 border border-gray-700 rounded-lg flex items-center justify-center">
+                  <FiHome className="w-12 h-12 text-gray-600" />
+                </div>
+                <button type="button" disabled className="relative cursor-not-allowed flex items-center px-4 py-2.5 bg-gray-700 text-white font-medium rounded-lg opacity-50">
+                  <FiUpload className="w-5 h-5 mr-2" />
+                  Upload Logo
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">You must "Create Theater" first before you can upload a logo.</p>
+            </div>
+          )}
 
           {/* Screen Management */}
           <div>

@@ -100,6 +100,22 @@ export const adminService = {
     }
   },
 
+  uploadTheaterLogo: async (id, file) => {
+    try {
+      const formData = new FormData();
+      formData.append('logo', file);
+      const response = await api.post(`/theaters/${id}/logo`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data.data; // Assumes API returns { status, data: { logo, logoPublicId } }
+    } catch (error) {
+      console.error('Error uploading theater logo:', error);
+      throw error;
+    }
+  },
+
   deleteTheater: async (id) => {
     try {
       const response = await api.delete(`/theaters/${id}`);
