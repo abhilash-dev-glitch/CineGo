@@ -126,21 +126,22 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchDashboardData(); // Initial data fetch
 
-    // --- WebSocket Connection ---
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const backendHost = import.meta.env.VITE_API_BASE 
-      ? import.meta.env.VITE_API_BASE.replace(/^https?:\/\//, '').replace(/\/api\/v1$/, '')
-      : 'localhost:3000';
-    const wsUrl = `${wsProtocol}//${backendHost}`;
-    console.log(`Connecting to WebSocket at: ${wsUrl}`);
+    // --- WebSocket Connection (Optional - for real-time updates) ---
+    try {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const backendHost = import.meta.env.VITE_API_BASE 
+        ? import.meta.env.VITE_API_BASE.replace(/^https?:\/\//, '').replace(/\/api\/v1$/, '')
+        : 'localhost:3000';
+      const wsUrl = `${wsProtocol}//${backendHost}`;
+      console.log(`Attempting WebSocket connection to: ${wsUrl}`);
 
-    ws.current = new WebSocket(wsUrl);
+      ws.current = new WebSocket(wsUrl);
 
-    ws.current.onopen = () => {
-      console.log('WebSocket connection established');
-    };
+      ws.current.onopen = () => {
+        console.log('✅ WebSocket connection established');
+      };
 
-    ws.current.onmessage = (event) => {
+      ws.current.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
         console.log('WebSocket message received:', message);
@@ -189,18 +190,25 @@ export default function AdminDashboard() {
       }
     };
 
-    ws.current.onclose = () => {
-      console.log('WebSocket connection closed');
-    };
+      ws.current.onclose = () => {
+        console.log('⚠️  WebSocket connection closed - real-time updates disabled');
+      };
 
-    ws.current.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
+      ws.current.onerror = (error) => {
+        console.warn('⚠️  WebSocket error (real-time updates unavailable):', error.message || 'Connection failed');
+      };
+    } catch (error) {
+      console.warn('⚠️  WebSocket not available - real-time updates disabled:', error.message);
+    }
 
     // Cleanup function
     return () => {
       if (ws.current) {
-        ws.current.close();
+        try {
+          ws.current.close();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
