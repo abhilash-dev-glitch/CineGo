@@ -296,6 +296,11 @@ export default function AdminMovies() {
     // Separate active and inactive movies
     const activeMovies = movies.filter(m => m.status !== 'inactive');
     const inactiveMovies = movies.filter(m => m.status === 'inactive');
+    
+    console.log('Total movies:', movies.length);
+    console.log('Active movies:', activeMovies.length);
+    console.log('Inactive movies:', inactiveMovies.length);
+    console.log('Inactive movies list:', inactiveMovies);
 
     return (
       <>
@@ -454,7 +459,7 @@ export default function AdminMovies() {
       </div>
 
       {/* Inactive Movies Section */}
-      {inactiveMovies.length > 0 && (
+      {inactiveMovies.length > 0 ? (
         <div className="mt-6 bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
           <button
             onClick={() => setShowInactive(!showInactive)}
@@ -600,6 +605,12 @@ export default function AdminMovies() {
               </table>
             </div>
           )}
+        </div>
+      ) : (
+        <div className="mt-6 bg-gray-900/30 border border-dashed border-gray-700 rounded-lg p-6 text-center">
+          <p className="text-gray-400 text-sm">
+            No inactive movies found. Movies automatically become inactive when all their shows expire.
+          </p>
         </div>
       )}
       </>
