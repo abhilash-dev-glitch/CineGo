@@ -561,10 +561,10 @@ export default function Profile() {
                           key={booking._id}
                           className="group bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-lg hover:shadow-brand/10"
                         >
-                          <div className="flex flex-col md:flex-row">
+                          <div className="flex flex-col sm:flex-row">
                             {/* Movie Poster */}
                             {(booking.showtime?.movie?.poster || booking.movie?.poster) && (
-                              <div className="flex-shrink-0 w-full md:w-32 h-48 md:h-auto">
+                              <div className="flex-shrink-0 w-full sm:w-24 md:w-32 h-36 sm:h-auto">
                                 <img
                                   src={booking.showtime?.movie?.poster || booking.movie?.poster}
                                   alt={booking.showtime?.movie?.title || booking.movie?.title || 'Movie'}
@@ -574,11 +574,11 @@ export default function Profile() {
                             )}
                             
                             {/* Booking Details */}
-                            <div className="flex-1 p-5">
-                              <div className="flex flex-col md:flex-row md:items-start justify-between">
+                            <div className="flex-1 p-3 sm:p-4 md:p-5">
+                              <div className="flex flex-col space-y-3">
                                 <div className="flex-1">
-                                  <div className="flex items-center flex-wrap gap-2">
-                                    <h3 className="text-lg font-semibold text-white group-hover:text-brand transition-colors duration-200">
+                                  <div className="flex items-start flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                                    <h3 className="text-base sm:text-lg font-semibold text-white group-hover:text-brand transition-colors duration-200">
                                       {booking.showtime?.movie?.title || booking.movie?.title || 'Movie'}
                                     </h3>
                                     {/* Payment Status Badge */}
@@ -708,19 +708,19 @@ export default function Profile() {
                                   </div>
                                 </div>
                                 
-                                <div className="mt-4 md:mt-0 flex flex-col md:flex-row items-start md:items-center gap-3">
-                                  <div className="text-left md:text-right">
-                                    <p className="text-sm text-white/60">Total Amount</p>
-                                    <p className="text-xl font-bold text-brand">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-white/10">
+                                  <div className="text-left">
+                                    <p className="text-xs sm:text-sm text-white/60">Total Amount</p>
+                                    <p className="text-lg sm:text-xl font-bold text-brand">
                                       ₹{booking.totalAmount?.toFixed(2) || '0.00'}
                                     </p>
                                   </div>
-                                  <div className="flex gap-2">
+                                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                                     <Link
                                       to={`/bookings/${booking._id}`}
-                                      className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-lg text-sm font-medium transition-colors duration-200 flex items-center group-hover:border-brand/50 group-hover:text-brand"
+                                      className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center group-hover:border-brand/50 group-hover:text-brand"
                                     >
-                                      <span>View</span>
+                                      <span>View Details</span>
                                       <svg
                                         className="ml-2 h-4 w-4"
                                         fill="none"
@@ -747,7 +747,7 @@ export default function Profile() {
                                         return (
                                           <button
                                             onClick={() => handleCancelBooking(booking._id)}
-                                            className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-600/50 text-red-400 hover:text-red-300 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center"
+                                            className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-600/50 text-red-400 hover:text-red-300 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center"
                                           >
                                             <svg
                                               className="mr-2 h-4 w-4"
