@@ -92,7 +92,8 @@ export default function AdminMovies() {
     try {
       setLoading(true);
       setError(null);
-      const response = await adminService.getMovies();
+      // Fetch all movies including inactive ones
+      const response = await adminService.getMovies({ filter: 'all' });
       // Check the actual response structure and adjust accordingly
       if (response && response.data) {
         // If response.data is an array, use it directly
@@ -601,7 +602,7 @@ export default function AdminMovies() {
           )}
         </div>
       )}
-    </>
+      </>
     );
   };
 
