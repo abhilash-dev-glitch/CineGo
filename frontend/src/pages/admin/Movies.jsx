@@ -463,18 +463,18 @@ export default function AdminMovies() {
         <div className="mt-6 bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
           <button
             onClick={() => setShowInactive(!showInactive)}
-            className="w-full px-6 py-4 bg-gray-800 border-b border-gray-700 flex items-center justify-between hover:bg-gray-750 transition-colors"
+            className="w-full px-6 py-4 bg-gray-800 border-b border-gray-700 flex items-center justify-between hover:bg-gradient-to-r hover:from-red-900/20 hover:to-gray-800 transition-all duration-300 hover:shadow-lg hover:shadow-red-900/30 group"
           >
             <div className="flex items-center gap-3">
               <h3 className="text-sm font-semibold text-gray-200 uppercase">
                 Inactive Movies ({inactiveMovies.length})
               </h3>
-              <span className="px-2 py-1 bg-red-900/30 text-red-400 text-xs rounded-full">
+              <span className="px-2 py-1 bg-red-900/30 text-red-400 text-xs rounded-full group-hover:bg-red-900/50 group-hover:text-red-300 transition-all duration-300 group-hover:animate-pulse">
                 All shows expired
               </span>
             </div>
             <svg
-              className={`w-5 h-5 text-gray-400 transition-transform ${showInactive ? 'rotate-180' : ''}`}
+              className={`w-5 h-5 text-gray-400 group-hover:text-red-400 transition-all duration-300 group-hover:scale-125 ${showInactive ? 'rotate-180' : ''}`}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -525,16 +525,16 @@ export default function AdminMovies() {
                     const isExpired = movie.showtimes && movie.showtimes.length > 0 && upcomingShows.length === 0;
 
                     return (
-                      <tr key={movie._id} className="hover:bg-gray-700/50 transition-colors opacity-60">
+                      <tr key={movie._id} className="opacity-60 hover:opacity-100 hover:bg-gradient-to-r hover:from-gray-700/80 hover:to-gray-800/80 transition-all duration-300 hover:shadow-lg hover:shadow-red-900/20 hover:border-l-4 hover:border-red-500">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-24 w-16 relative">
+                          <div className="flex items-center group/poster">
+                            <div className="flex-shrink-0 h-24 w-16 relative transition-all duration-300 group-hover/poster:scale-105">
                               <img
-                                className="h-24 w-16 rounded-md object-cover border border-gray-700"
+                                className="h-24 w-16 rounded-md object-cover border border-gray-700 group-hover/poster:border-red-500 group-hover/poster:shadow-lg group-hover/poster:shadow-red-500/50 transition-all duration-300"
                                 src={movie.poster || 'https://placehold.co/128x176/1f2937/9ca3af?text=No+Poster'}
                                 alt={movie.title}
                               />
-                              <div className="absolute top-1 left-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                              <div className="absolute top-1 left-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded group-hover/poster:bg-red-500 group-hover/poster:animate-pulse transition-all duration-300">
                                 EXPIRED
                               </div>
                             </div>
@@ -575,24 +575,24 @@ export default function AdminMovies() {
                             Inactive
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                           <button
                             onClick={() => handleQuickStatusChange(movie._id, 'active')}
-                            className="text-green-400 hover:text-green-300 transition-colors p-1"
+                            className="text-green-400 hover:text-green-200 hover:bg-green-500/20 hover:scale-110 transition-all duration-200 p-2 rounded-lg hover:shadow-lg hover:shadow-green-500/50"
                             title="Reactivate Movie"
                           >
                             <FiCheckCircle size={18} />
                           </button>
                           <button
                             onClick={() => handleOpenModal(movie)}
-                            className="text-indigo-400 hover:text-indigo-300 transition-colors p-1"
+                            className="text-indigo-400 hover:text-indigo-200 hover:bg-indigo-500/20 hover:scale-110 transition-all duration-200 p-2 rounded-lg hover:shadow-lg hover:shadow-indigo-500/50"
                             title="Edit Movie"
                           >
                             <FiEdit size={18} />
                           </button>
                           <button
                             onClick={() => handleDelete(movie._id)}
-                            className="text-red-500 hover:text-red-400 transition-colors p-1"
+                            className="text-red-500 hover:text-red-200 hover:bg-red-500/20 hover:scale-110 transition-all duration-200 p-2 rounded-lg hover:shadow-lg hover:shadow-red-500/50"
                             title="Delete Movie"
                           >
                             <FiTrash2 size={18} />
