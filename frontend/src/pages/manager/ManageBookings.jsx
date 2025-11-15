@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { toast } from '../../lib/toast';
+import { useWebSocket } from '../../hooks/useWebSocket';
 import {
   FiCalendar,
   FiUser,
@@ -71,6 +72,23 @@ export default function ManageBookings() {
       setLoading(false);
     }
   }, [myTheaters]);
+
+  // Real-time WebSocket updates
+  const handleWebSocketMessage = (message) => {
+    switch (message.type) {
+      case 'NEW_BOOKING':
+      case 'BOOKING_PAID':
+      case 'BOOKING_CANCELLED':
+        if (myTheaters && myTheaters.length > 0) {
+          fetchBookings();
+        }
+        break;
+      default:
+        break;
+    }
+  };
+
+  useWebSocket(handleWebSocketMessage, [myTheaters]);
 
   const filteredBookings = bookings.filter(booking => {
     if (filter === 'all') return true;

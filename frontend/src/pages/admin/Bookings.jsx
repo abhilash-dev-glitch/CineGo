@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { adminService } from '../../services/adminService';
 import { toast } from '../../lib/toast';
+import { useWebSocket } from '../../hooks/useWebSocket';
 import {
   FiCalendar,
   FiUser,
@@ -65,6 +66,28 @@ export default function AdminBookings() {
   useEffect(() => {
     fetchBookings();
   }, []);
+
+  // Real-time WebSocket updates
+  const handleWebSocketMessage = (message) => {
+    switch (message.type) {
+      case 'NEW_BOOKING':
+        fetchBookings();
+        toast.info('New Booking', 'A new booking was just created!');
+        break;
+      case 'BOOKING_PAID':
+        fetchBookings();
+        toast.success('Payment Confirmed', 'A booking payment was confirmed!');
+        break;
+      case 'BOOKING_CANCELLED':
+        fetchBookings();
+        toast.warning('Booking Cancelled', 'A booking was cancelled.');
+        break;
+      default:
+        break;
+    }
+  };
+
+  useWebSocket(handleWebSocketMessage, []);
 
   const filteredBookings = bookings.filter(booking => {
     if (filter === 'all') return true;

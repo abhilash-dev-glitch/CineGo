@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { toast } from '../../lib/toast';
+import { useWebSocket } from '../../hooks/useWebSocket';
 import { FiPlus, FiTrash2, FiClock, FiFilm, FiEdit2 } from 'react-icons/fi';
 import { format, parseISO, isAfter } from 'date-fns';
 
@@ -66,6 +67,23 @@ export default function ManageShows() {
   useEffect(() => {
     loadShows();
   }, [selectedTheaterId]);
+
+  // Real-time WebSocket updates
+  const handleWebSocketMessage = (message) => {
+    switch (message.type) {
+      case 'NEW_SHOW':
+      case 'SHOW_UPDATED':
+      case 'SHOW_DELETED':
+        if (selectedTheaterId) {
+          loadShows();
+        }
+        break;
+      default:
+        break;
+    }
+  };
+
+  useWebSocket(handleWebSocketMessage, [selectedTheaterId]);
 
   // Helper function to update form state
   const set = (key, value) => {

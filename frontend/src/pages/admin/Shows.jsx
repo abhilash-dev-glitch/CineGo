@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { adminService } from '../../services/adminService'; // Corrected
 import { toast } from '../../lib/toast'; // Corrected
+import { useWebSocket } from '../../hooks/useWebSocket';
 import {
   FiPlus,
   FiEdit,
@@ -112,6 +113,24 @@ export default function AdminShows() {
   useEffect(() => {
     fetchAllData();
   }, []);
+
+  // Real-time WebSocket updates
+  const handleWebSocketMessage = (message) => {
+    switch (message.type) {
+      case 'NEW_SHOW':
+      case 'SHOW_UPDATED':
+      case 'SHOW_DELETED':
+        fetchAllData();
+        if (message.type === 'NEW_SHOW') {
+          toast.info('New Show', 'A new show was added!');
+        }
+        break;
+      default:
+        break;
+    }
+  };
+
+  useWebSocket(handleWebSocketMessage, []);
 
   // Update available screens when theater selection changes in the form
   useEffect(() => {
