@@ -573,7 +573,7 @@ export default function AdminShows() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">Show Duration</label>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">Show Duration (Days)</label>
               <div className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-400">
                 {currentShow?.date && currentShow?.endDate ? (
                   <>
@@ -584,24 +584,47 @@ export default function AdminShows() {
                 )}
               </div>
             </div>
-            <FormInput label="End Time (auto-calculated)" name="endTime" type="time" value={currentShow?.endTime} onChange={handleFormChange} required />
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">End Time (auto-calculated)</label>
+              <div className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-400">
+                {currentShow?.endTime ? (
+                  <>
+                    {(() => {
+                      try {
+                        const [hours, minutes] = currentShow.endTime.split(':');
+                        const hour = parseInt(hours);
+                        const hour12 = hour % 12 || 12;
+                        const period = hour >= 12 ? 'PM' : 'AM';
+                        return `${hour12}:${minutes} ${period}`;
+                      } catch {
+                        return currentShow.endTime;
+                      }
+                    })()}
+                  </>
+                ) : (
+                  'Will be calculated based on movie duration'
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
              <FormInput label="Price (INR)" name="price" type="number" value={currentShow?.price} onChange={handleFormChange} required />
+             <FormInput label="Available Seats" name="availableSeats" type="number" value={currentShow?.availableSeats} onChange={handleFormChange} required />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+             <FormInput label="Total Seats" name="totalSeats" type="number" value={currentShow?.totalSeats} onChange={handleFormChange} required />
              <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">End Time (auto-calculated)</label>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">Movie Duration</label>
               <div className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-400">
-                {currentShow?.endTime || 'Will be calculated based on movie duration'}
+                {currentShow?.movie && movies.find(m => m._id === currentShow.movie)?.duration 
+                  ? `${movies.find(m => m._id === currentShow.movie).duration} minutes`
+                  : 'Select a movie to see duration'}
               </div>
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-             <FormInput label="Available Seats" name="availableSeats" type="number" value={currentShow?.availableSeats} onChange={handleFormChange} required />
-             <FormInput label="Total Seats" name="totalSeats" type="number" value={currentShow?.totalSeats} onChange={handleFormChange} required />
-          </div>
-
           <div className="flex items-center pt-4">
             <input
               type="checkbox"
