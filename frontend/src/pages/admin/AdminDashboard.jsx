@@ -241,14 +241,14 @@ export default function AdminDashboard() {
         {statsData.map((stat, index) => (
           <div
             key={index}
-            className="bg-white rounded-xl shadow-sm p-6 flex items-center gap-4"
+            className="bg-white rounded-xl shadow-sm p-6 flex items-start gap-4"
           >
             <div className="p-3 rounded-lg bg-indigo-50 flex-shrink-0">
               {stat.icon}
             </div>
-            <div className="flex flex-col justify-center min-w-0">
-              <p className="text-sm text-gray-500 mb-1">{stat.title}</p>
-              <h3 className="text-2xl font-bold text-gray-800 truncate">{stat.value}</h3>
+            <div className="flex flex-col justify-center flex-1 overflow-hidden">
+              <p className="text-sm text-gray-500 mb-1 whitespace-nowrap">{stat.title}</p>
+              <h3 className="text-xl font-bold text-gray-800 break-all" title={stat.value}>{stat.value}</h3>
             </div>
           </div>
         ))}
