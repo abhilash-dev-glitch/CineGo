@@ -170,20 +170,7 @@ export default function ManagerScreens() {
         </div>
       )}
 
-      {/* Debug Info (remove in production) */}
-      {selectedTheater && (
-        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-xs">
-          <p className="text-blue-300">
-            <strong>Debug:</strong> Theater: {selectedTheater.name} | 
-            Screens: {selectedTheater.screens?.length || 0} | 
-            Total Shows: {allShows.length} | 
-            Filtered Shows: {allShows.filter(s => {
-              const tid = typeof s.theater === 'object' ? s.theater._id : s.theater;
-              return tid === selectedTheaterId;
-            }).length}
-          </p>
-        </div>
-      )}
+
 
       {/* Screens List */}
       {!selectedTheater ? (
@@ -306,30 +293,34 @@ export default function ManagerScreens() {
                       </div>
                     )}
 
-                    {/* Active Shows */}
+                    {/* Active Shows - Currently Running */}
                     {screen.activeShowsList.length > 0 && (
-                      <div className="p-4 border-t border-white/10">
-                        <h4 className="text-sm font-medium text-green-400 mb-3 flex items-center">
+                      <div className="p-4 border-t border-white/10 bg-green-500/5">
+                        <h4 className="text-sm font-semibold text-green-400 mb-3 flex items-center">
                           <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
-                          Active Shows ({screen.activeShowsList.length})
+                          Currently Running ({screen.activeShowsList.length})
                         </h4>
                         <div className="space-y-2">
                           {screen.activeShowsList.map((show) => (
-                            <div key={show._id} className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                            <div key={show._id} className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 shadow-sm">
                               <div className="flex items-center justify-between">
                                 <div className="flex-1">
-                                  <p className="font-medium text-white">{show.movie?.title || 'Unknown Movie'}</p>
-                                  <div className="flex items-center space-x-3 mt-1 text-xs text-gray-300">
+                                  <p className="font-semibold text-white text-base">{show.movie?.title || 'Unknown Movie'}</p>
+                                  <div className="flex items-center space-x-3 mt-1.5 text-xs text-gray-300">
                                     <span className="flex items-center">
                                       <FiClock className="mr-1 h-3 w-3" />
-                                      {format(new Date(show.startTime), 'h:mm a')} - {format(new Date(show.endTime), 'h:mm a')}
+                                      Started: {format(new Date(show.startTime), 'h:mm a')}
                                     </span>
                                     <span>•</span>
-                                    <span>₹{show.price}</span>
+                                    <span className="flex items-center">
+                                      Ends: {format(new Date(show.endTime), 'h:mm a')}
+                                    </span>
+                                    <span>•</span>
+                                    <span className="font-medium">₹{show.price}</span>
                                   </div>
                                 </div>
-                                <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-medium rounded">
-                                  Now Playing
+                                <span className="px-3 py-1.5 bg-green-500/30 text-green-300 text-xs font-bold rounded-full border border-green-400/50">
+                                  🎬 LIVE
                                 </span>
                               </div>
                             </div>
@@ -341,35 +332,51 @@ export default function ManagerScreens() {
                     {/* Upcoming Shows */}
                     {screen.upcomingShowsList.length > 0 && (
                       <div className="p-4 border-t border-white/10">
-                        <h4 className="text-sm font-medium text-blue-400 mb-3">
+                        <h4 className="text-sm font-semibold text-blue-400 mb-3 flex items-center">
+                          <FiCalendar className="mr-2 h-4 w-4" />
                           Upcoming Shows ({screen.upcomingShowsList.length})
                         </h4>
                         <div className="space-y-2">
-                          {screen.upcomingShowsList.slice(0, 5).map((show) => (
-                            <div key={show._id} className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-colors">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="font-medium text-white">{show.movie?.title || 'Unknown Movie'}</p>
-                                  <div className="flex items-center space-x-3 mt-1 text-xs text-gray-400">
-                                    <span className="flex items-center">
-                                      <FiCalendar className="mr-1 h-3 w-3" />
-                                      {format(new Date(show.startTime), 'MMM d, yyyy')}
-                                    </span>
-                                    <span>•</span>
-                                    <span className="flex items-center">
-                                      <FiClock className="mr-1 h-3 w-3" />
-                                      {format(new Date(show.startTime), 'h:mm a')}
-                                    </span>
-                                    <span>•</span>
-                                    <span>₹{show.price}</span>
+                          {screen.upcomingShowsList.slice(0, 5).map((show, index) => {
+                            const isNext = index === 0;
+                            return (
+                              <div 
+                                key={show._id} 
+                                className={`rounded-lg p-3 hover:bg-white/10 transition-colors ${
+                                  isNext ? 'bg-blue-500/10 border border-blue-500/30' : 'bg-white/5'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-medium text-white">{show.movie?.title || 'Unknown Movie'}</p>
+                                      {isNext && (
+                                        <span className="px-2 py-0.5 bg-blue-500/30 text-blue-300 text-[10px] font-bold rounded">
+                                          NEXT
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center space-x-3 mt-1 text-xs text-gray-400">
+                                      <span className="flex items-center">
+                                        <FiCalendar className="mr-1 h-3 w-3" />
+                                        {format(new Date(show.startTime), 'MMM d, yyyy')}
+                                      </span>
+                                      <span>•</span>
+                                      <span className="flex items-center">
+                                        <FiClock className="mr-1 h-3 w-3" />
+                                        {format(new Date(show.startTime), 'h:mm a')}
+                                      </span>
+                                      <span>•</span>
+                                      <span className="font-medium">₹{show.price}</span>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                           {screen.upcomingShowsList.length > 5 && (
                             <p className="text-xs text-gray-400 text-center pt-2">
-                              + {screen.upcomingShowsList.length - 5} more shows
+                              + {screen.upcomingShowsList.length - 5} more upcoming shows
                             </p>
                           )}
                         </div>
