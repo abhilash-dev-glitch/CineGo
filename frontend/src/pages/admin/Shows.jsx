@@ -183,12 +183,23 @@ export default function AdminShows() {
         startPeriod: period,
       });
     } else {
+      // Initialize with default values for new show
+      // 12:00 PM = 12:00 in 24-hour format
       setCurrentShow({
+        movie: '',
+        theater: '',
+        screen: '',
         price: 150, // Default price
         isActive: true,
         startHour: '12',
         startMinute: '00',
         startPeriod: 'PM',
+        startTime: '12:00', // 12:00 PM in 24-hour format
+        endTime: '14:00', // Default 2 hours later
+        date: new Date().toISOString().split('T')[0], // Today's date
+        endDate: new Date().toISOString().split('T')[0], // Today's date
+        availableSeats: 50,
+        totalSeats: 50,
       });
     }
     setIsModalOpen(true);
