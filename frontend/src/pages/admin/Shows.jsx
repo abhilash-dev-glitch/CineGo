@@ -255,32 +255,42 @@ export default function AdminShows() {
   // --- Helper Functions ---
   
   const isShowExpired = (show) => {
-    if (!show.endDate) {
-      console.log('⚠️ Show has no endDate:', show.movie?.title, show);
-      return false;
-    }
-    
-    // Get current date and time
     const now = new Date();
     
-    // Parse the end date and set to end of that day (23:59:59)
-    const endDate = new Date(show.endDate);
-    const endOfDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999);
+    // If show has endDate, use it
+    if (show.endDate) {
+      const endDate = new Date(show.endDate);
+      const endOfDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999);
+      const isExpired = endOfDay < now;
+      
+      console.log(
+        isExpired ? '🔴 EXPIRED:' : '🟢 ACTIVE:',
+        show.movie?.title,
+        '| End Date:', show.endDate,
+        '| Expired:', isExpired
+      );
+      
+      return isExpired;
+    }
     
-    const isExpired = endOfDay < now;
+    // Fallback: If no endDate, check if startTime has passed (old shows)
+    if (show.startTime) {
+      const startTime = new Date(show.startTime);
+      const isExpired = startTime < now;
+      
+      console.log(
+        isExpired ? '🔴 EXPIRED (no endDate):' : '🟢 ACTIVE (no endDate):',
+        show.movie?.title,
+        '| Start Time:', show.startTime,
+        '| Expired:', isExpired
+      );
+      
+      return isExpired;
+    }
     
-    // Debug logging
-    console.log(
-      isExpired ? '🔴 EXPIRED:' : '🟢 ACTIVE:',
-      show.movie?.title,
-      '| End Date:', show.endDate,
-      '| End of Day:', endOfDay.toLocaleString(),
-      '| Now:', now.toLocaleString(),
-      '| Expired:', isExpired
-    );
-    
-    // Show is expired if the end of the end date has passed
-    return isExpired;
+    // If neither endDate nor startTime, consider it active
+    console.log('⚠️ Show has no endDate or startTime:', show.movie?.title);
+    return false;
   };
   
   // --- Render Functions ---
