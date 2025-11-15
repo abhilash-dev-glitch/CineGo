@@ -48,9 +48,11 @@ exports.getAllMovies = async (req, res, next) => {
         isActive: true
       }).distinct('movie');
       
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      
       const features = new APIFeatures(Movie.find({ 
         _id: { $in: activeShowtimes },
-        releaseDate: { $gte: sevenDaysFromNow, $lte: now }
+        releaseDate: { $gte: sevenDaysAgo, $lte: now }
       }), req.query)
         .sort('-releaseDate')
         .limitFields()
@@ -93,8 +95,14 @@ exports.getAllMovies = async (req, res, next) => {
       });
       
     } else {
-      // ALL or TOP-RATED: Show all movies
-      const features = new APIFeatures(Movie.find({}), req.query)
+      // ALL or TOP-RATED: Show only movies with active showtimes (default behavior)
+      const Showtime = require('../models/Showtime');
+      const activeShowtimes = await Showtime.find({
+        startTime: { $gte: now },
+        isActive: true
+      }).distinct('movie');
+      
+      const features = new APIFeatures(Movie.find({ _id: { $in: activeShowtimes } }), req.query)
         .filter()
         .sort()
         .limitFields()
