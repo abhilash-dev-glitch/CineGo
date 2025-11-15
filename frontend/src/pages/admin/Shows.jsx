@@ -502,7 +502,10 @@ export default function AdminShows() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-white">{show.theater?.name}</div>
-                    <div className="text-sm text-gray-300">{show.screen}</div>
+                    <div className="text-sm text-gray-300">
+                      {/* Handle both screen name (string) and screen object */}
+                      {typeof show.screen === 'object' ? show.screen?.name : show.screen}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-white mb-1">
