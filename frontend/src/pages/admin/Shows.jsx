@@ -337,15 +337,18 @@ export default function AdminShows() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {(() => {
-                      // Compare dates without time component
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
+                      // Get current date without time
+                      const now = new Date();
+                      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                       
-                      const endDate = show.endDate ? new Date(show.endDate) : null;
-                      if (endDate) {
-                        endDate.setHours(0, 0, 0, 0);
+                      // Get end date without time
+                      let endDate = null;
+                      if (show.endDate) {
+                        const ed = new Date(show.endDate);
+                        endDate = new Date(ed.getFullYear(), ed.getMonth(), ed.getDate());
                       }
                       
+                      // Show is expired if end date is before today
                       const isExpired = endDate && endDate < today;
                       const isActive = show.isActive && !isExpired;
                       
