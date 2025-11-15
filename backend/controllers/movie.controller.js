@@ -58,9 +58,12 @@ exports.getAllMovies = async (req, res, next) => {
       .paginate();
 
     // Populate showtimes to get insights for the admin panel
-    const movies = await features.query.populate({
+    let movies = await features.query.populate({
       path: 'showtimes',
-      match: { startTime: { $gte: new Date() } }, // Only get active/upcoming showtimes
+      match: { 
+        startTime: { $gte: new Date() },
+        isActive: true 
+      }, // Only get active/upcoming showtimes
       populate: [
         {
           path: 'theater',
@@ -71,6 +74,11 @@ exports.getAllMovies = async (req, res, next) => {
         }
       ],
     });
+
+    // For 'active' view, filter out movies without any active showtimes
+    if (viewFilter === 'active' || viewFilter === 'now-showing' || viewFilter === 'new') {
+      movies = movies.filter(movie => movie.showtimes && movie.showtimes.length > 0);
+    }
 
     res.status(200).json({
       status: 'success',
