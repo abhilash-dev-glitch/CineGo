@@ -24,6 +24,13 @@ export default function SignUp(){
   const validateName = (name) => {
     if (!name.trim()) return 'Name is required';
     if (name.trim().length < 2) return 'Name must be at least 2 characters';
+    if (name.trim().length > 50) return 'Name must not exceed 50 characters';
+    // Reject names that are only numbers
+    if (/^\d+$/.test(name.trim())) return 'Name cannot be only numbers';
+    // Require at least one letter
+    if (!/[a-zA-Z]/.test(name)) return 'Name must contain at least one letter';
+    // Reject names with special characters except spaces, hyphens, and apostrophes
+    if (!/^[a-zA-Z\s\-']+$/.test(name.trim())) return 'Name can only contain letters, spaces, hyphens, and apostrophes';
     return '';
   };
 
@@ -36,9 +43,29 @@ export default function SignUp(){
 
   const validatePhone = (phone) => {
     if (!phone) return 'Phone number is required';
+    
+    // Remove all non-digit characters for validation
+    const digitsOnly = phone.replace(/\D/g, '');
+    
+    // Check length
+    if (digitsOnly.length < 10) return 'Phone number must be at least 10 digits';
+    if (digitsOnly.length > 15) return 'Phone number must not exceed 15 digits';
+    
+    // Reject repetitive numbers (e.g., 1111111111, 0000000000)
+    if (/^(\d)\1+$/.test(digitsOnly)) return 'Phone number cannot be all the same digit';
+    
+    // Reject sequential numbers (e.g., 1234567890, 0123456789)
+    const isSequential = digitsOnly.split('').every((digit, i, arr) => {
+      if (i === 0) return true;
+      return parseInt(digit) === parseInt(arr[i-1]) + 1 || 
+             (parseInt(arr[i-1]) === 9 && parseInt(digit) === 0);
+    });
+    if (isSequential) return 'Phone number cannot be sequential digits';
+    
+    // Basic format validation
     const phoneRegex = /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/;
-    if (!phoneRegex.test(phone)) return 'Please enter a valid phone number';
-    if (phone.replace(/\D/g, '').length < 10) return 'Phone number must be at least 10 digits';
+    if (!phoneRegex.test(phone)) return 'Please enter a valid phone number format';
+    
     return '';
   };
 
