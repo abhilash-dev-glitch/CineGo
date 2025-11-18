@@ -72,7 +72,7 @@ export default function Home() {
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [view, setView] = useState('all'); // 'all' | 'new' | 'upcoming'
+  const [view, setView] = useState('now-showing'); // 'now-showing' | 'all' | 'new' | 'upcoming'
   const carouselRef = useRef(null);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -107,9 +107,10 @@ export default function Home() {
       setError(null);
       
       const params = {
-        ...(view === 'new' && { view: 'new' }),
-        ...(view === 'all' && { view: 'all', sort: '-releasedAt' }),
-        ...(view === 'upcoming' && { view: 'upcoming' }),
+        ...(view === 'now-showing' && { view: 'active', sort: '-releaseDate' }),
+        ...(view === 'all' && { view: 'all-with-status', sort: '-releaseDate' }),
+        ...(view === 'new' && { view: 'new', sort: '-releaseDate' }),
+        ...(view === 'upcoming' && { view: 'upcoming', sort: 'releaseDate' }),
       };
       
       console.log('Fetching movies with params:', params);
@@ -183,11 +184,12 @@ export default function Home() {
     }
   }, [fetchMovies, isMounted]);
 
-  // View options for movie filtering
+  // View options for movie filtering - matching Movies page
   const viewOptions = [
-    { id: 'all', label: 'All Movies' },
-    { id: 'new', label: 'New Releases' },
-    { id: 'upcoming', label: 'Coming Soon' },
+    { id: 'now-showing', label: 'Now Showing', icon: '🎬' },
+    { id: 'all', label: 'All Movies', icon: '🎞️' },
+    { id: 'new', label: 'New Releases', icon: '⭐' },
+    { id: 'upcoming', label: 'Coming Soon', icon: '📅' },
   ];
 
   // Auto-scroll carousel
@@ -408,21 +410,23 @@ export default function Home() {
         <div className="container mx-auto px-4 md:px-6">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 md:mb-0">
-              {view === 'new' ? 'New Releases' : 
-               view === 'upcoming' ? 'Coming Soon' : 
-               'Now Showing'}
+              {view === 'now-showing' ? 'Now Showing' :
+               view === 'all' ? 'All Movies' :
+               view === 'new' ? 'New Releases' : 
+               'Coming Soon'}
             </h2>
             <div className="flex flex-wrap gap-2">
               {viewOptions.map((option) => (
                 <button
                   key={option.id}
                   onClick={() => setView(option.id)}
-                  className={`px-4 py-2 rounded-lg text-sm md:text-base ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm md:text-base font-medium transition-all ${
                     view === option.id 
-                      ? 'bg-brand text-white' 
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      ? 'bg-brand text-white shadow-lg scale-105' 
+                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:scale-105'
                   }`}
                 >
+                  <span>{option.icon}</span>
                   {option.label}
                 </button>
               ))}
