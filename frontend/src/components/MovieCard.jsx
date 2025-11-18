@@ -7,12 +7,56 @@ export default function MovieCard({ movie }) {
   const genresText = genresArr.length ? genresArr.join(', ') : 'Drama/Thriller'
   const ratingValue = movie.ratingsAverage ?? movie.rating ?? '8.7'
   const ratingCount = movie.ratingsCount ?? null
+  
+  // Determine movie status badge
+  const getStatusBadge = () => {
+    const today = new Date();
+    const releaseDate = movie.releaseDate ? new Date(movie.releaseDate) : null;
+    
+    // Check if movie is unreleased (future release date)
+    if (releaseDate && releaseDate > today) {
+      return { label: 'Coming Soon', color: 'bg-orange-500/90 text-white', icon: '📅' };
+    }
+    
+    // Check if movie has no active shows
+    if (movie.hasActiveShows === false) {
+      return { label: 'No Shows', color: 'bg-red-600/90 text-white', icon: '🚫' };
+    }
+    
+    // Check if movie is newly released (within last 7 days)
+    if (releaseDate) {
+      const daysSinceRelease = Math.floor((today - releaseDate) / (1000 * 60 * 60 * 24));
+      if (daysSinceRelease >= 0 && daysSinceRelease <= 7) {
+        return { label: 'New Release', color: 'bg-purple-600/90 text-white', icon: '⭐' };
+      }
+    }
+    
+    // Check if movie has active shows (now showing)
+    if (movie.hasActiveShows === true) {
+      return { label: 'Now Showing', color: 'bg-green-600/90 text-white', icon: '🎬' };
+    }
+    
+    return null;
+  };
+  
+  const statusBadge = getStatusBadge();
+  
   return (
     <Link to={`/movies/${id}`} className="group block">
       <div className="aspect-[2/3] rounded-xl overflow-hidden shadow-soft bg-white/5 border border-white/10 relative">
         <img src={poster} alt={movie.title} className="h-full w-full object-cover group-hover:scale-[1.03] transition duration-500"/>
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0 pointer-events-none"/>
-        <div className="absolute bottom-2 left-2 inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-green-500/20 text-green-300 border border-green-400/20">
+        
+        {/* Status Badge - Top Right */}
+        {statusBadge && (
+          <div className={`absolute top-2 right-2 inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${statusBadge.color} shadow-lg backdrop-blur-sm`}>
+            <span>{statusBadge.icon}</span>
+            <span>{statusBadge.label}</span>
+          </div>
+        )}
+        
+        {/* Rating Badge - Bottom Left */}
+        <div className="absolute bottom-2 left-2 inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-green-500/20 text-green-300 border border-green-400/20 backdrop-blur-sm">
           <span>★</span>
           <span>{ratingValue}</span>
           <span className="opacity-75">•</span>
