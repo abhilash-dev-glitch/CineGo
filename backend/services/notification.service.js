@@ -44,16 +44,19 @@ const queueNotification = async (type, data, options = {}) => {
     queue = QUEUES.EMAIL; // Use EMAIL queue for cancellations
   }
   
-  // Publish to queue
-  const published = await publishToQueue(queue, notification);
+  // FORCE SYNCHRONOUS SENDING (Worker not running)
+  // Skip queue and send directly
+  console.log('📧 Sending notification synchronously (bypassing queue)');
+  const result = await sendNotificationSync(type, data, options);
+  return { queued: false, sent: true, result };
   
-  // If queue is not available, send synchronously
-  if (!published) {
-    console.log('⚠️  Queue not available, sending notification synchronously');
-    await sendNotificationSync(type, data, options);
-  }
-  
-  return { queued: published };
+  // Original queue logic (commented out until worker is running)
+  // const published = await publishToQueue(queue, notification);
+  // if (!published) {
+  //   console.log('⚠️  Queue not available, sending notification synchronously');
+  //   await sendNotificationSync(type, data, options);
+  // }
+  // return { queued: published };
 };
 
 /**
