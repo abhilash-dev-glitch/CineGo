@@ -94,6 +94,74 @@ exports.getAllMovies = async (req, res, next) => {
         populate: { path: 'theater', select: 'name' }
       });
       
+    } else if (viewFilter === 'premier') {
+      // PREMIER SHOWS: Movies with shows starting tomorrow or later (not today)
+      const Showtime = require('../models/Showtime');
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      
+      const premierShowtimes = await Showtime.find({
+        startTime: { $gte: tomorrow },
+        isActive: true
+      }).distinct('movie');
+      
+      const features = new APIFeatures(Movie.find({ _id: { $in: premierShowtimes } }), req.query)
+        .sort('releaseDate')
+        .limitFields()
+        .paginate();
+      
+      movies = await features.query.populate({
+        path: 'showtimes',
+        match: { startTime: { $gte: tomorrow }, isActive: true },
+        populate: { path: 'theater', select: 'name' }
+      });
+      
+    } else if (viewFilter === 'unreleased') {
+      // UNRELEASED: Movies with future release dates and no current shows
+      const Showtime = require('../models/Showtime');
+      const moviesWithShows = await Showtime.find({
+        startTime: { $gte: now },
+        isActive: true
+      }).distinct('movie');
+      
+      const features = new APIFeatures(Movie.find({ 
+        status: 'upcoming',
+        releaseDate: { $gt: now },
+        _id: { $nin: moviesWithShows }
+      }), req.query)
+        .sort('releaseDate')
+        .limitFields()
+        .paginate();
+      
+      movies = await features.query;
+      
+    } else if (viewFilter === 'all-with-status') {
+      // ALL MOVIES WITH STATUS: Return all movies, mark those without shows as expired
+      const Showtime = require('../models/Showtime');
+      const moviesWithActiveShows = await Showtime.find({
+        startTime: { $gte: now },
+        isActive: true
+      }).distinct('movie');
+      
+      const features = new APIFeatures(Movie.find({}), req.query)
+        .filter()
+        .sort()
+        .limitFields()
+        .paginate();
+      
+      movies = await features.query.populate({
+        path: 'showtimes',
+        match: { startTime: { $gte: now }, isActive: true },
+        populate: { path: 'theater', select: 'name' }
+      });
+      
+      // Add hasActiveShows flag to each movie
+      movies = movies.map(movie => ({
+        ...movie.toObject(),
+        hasActiveShows: moviesWithActiveShows.some(id => id.toString() === movie._id.toString())
+      }));
+      
     } else if (viewFilter === 'all') {
       // ALL MOVIES: For admin panel - return all movies regardless of showtimes
       const features = new APIFeatures(Movie.find({}), req.query)

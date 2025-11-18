@@ -3,146 +3,156 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { MoviesAPI } from '../lib/api';
 import MovieCard from '../components/MovieCard';
 import { toast } from '../lib/toast';
+import { FiClock, FiCalendar, FiStar } from 'react-icons/fi';
 
 export default function Movies() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [movies, setMovies] = useState([]);
+  const [premierMovies, setPremierMovies] = useState([]);
+  const [unreleasedMovies, setUnreleasedMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Get filter, search query, and page from URL
+  // Get filter from URL
   const filter = searchParams.get('filter') || 'now-showing';
-  const searchQuery = searchParams.get('search') || '';
-  const currentPage = parseInt(searchParams.get('page') || '1', 10);
-  
-  // Pagination settings
-  const moviesPerPage = 10;
-  const [totalMovies, setTotalMovies] = useState(0);
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
+    const fetchMovies = async () => {
+      setLoading(true);
+      setError(null);
 
-    // Define API parameters based on the selected filter
-    let params = {};
-    switch(filter) {
-      case 'now-showing':
-        params = { view: 'active', sort: '-releasedAt' };
-        break;
-      case 'coming-soon':
-        params = { view: 'upcoming', sort: 'releasedAt' };
-        break;
-      case 'top-rated':
-        params = { view: 'all', sort: '-rating', limit: 10 };
-        break;
-      default:
-        params = { view: 'active', sort: '-releasedAt' };
-    }
+      try {
+        let params = {};
+        
+        switch(filter) {
+          case 'now-showing':
+            // Movies with shows available today
+            params = { view: 'active', sort: '-releaseDate' };
+            break;
+          case 'all-movies':
+            // All movies with status flags
+            params = { view: 'all-with-status', sort: '-releaseDate' };
+            break;
+          case 'coming-soon':
+            // Fetch premier shows (tomorrow+) and unreleased movies
+            const [premierRes, unreleasedRes] = await Promise.all([
+              MoviesAPI.list({ view: 'premier', sort: 'releaseDate' }),
+              MoviesAPI.list({ view: 'unreleased', sort: 'releaseDate' })
+            ]);
+            setPremierMovies(Array.isArray(premierRes) ? premierRes : []);
+            setUnreleasedMovies(Array.isArray(unreleasedRes) ? unreleasedRes : []);
+            setMovies([]);
+            setLoading(false);
+            return;
+          default:
+            params = { view: 'active', sort: '-releaseDate' };
+        }
 
-    // Fetch movies based on the selected filter
-    MoviesAPI.list(params)
-      .then(moviesData => {
+        const moviesData = await MoviesAPI.list(params);
+        
         if (!moviesData || !Array.isArray(moviesData)) {
           console.error('Invalid movies data received:', moviesData);
           setError('Invalid data received from server');
           return;
         }
         
-        // Filter out any invalid movie objects
-        let validMovies = moviesData.filter(movie => 
+        // Filter out invalid movie objects
+        const validMovies = moviesData.filter(movie => 
           movie && 
           (movie.title || movie.name) && 
           (movie.poster || movie.image)
         );
-
-        // Apply search filter if search query exists
-        if (searchQuery) {
-          validMovies = validMovies.filter(movie => {
-            const title = (movie.title || movie.name || '').toLowerCase();
-            const description = (movie.description || '').toLowerCase();
-            const genres = Array.isArray(movie.genre) ? movie.genre.join(' ').toLowerCase() : '';
-            const query = searchQuery.toLowerCase();
-            
-            return title.includes(query) || description.includes(query) || genres.includes(query);
-          });
-        }
         
-        if (validMovies.length === 0 && moviesData.length > 0) {
-          console.warn('No valid movies found in response:', moviesData);
-        }
-        
-        // Set total movies for pagination
-        setTotalMovies(validMovies.length);
-        
-        // Apply pagination
-        const startIndex = (currentPage - 1) * moviesPerPage;
-        const endIndex = startIndex + moviesPerPage;
-        const paginatedMovies = validMovies.slice(startIndex, endIndex);
-        
-        setMovies(paginatedMovies);
-      })
-      .catch(err => {
+        setMovies(validMovies);
+        setPremierMovies([]);
+        setUnreleasedMovies([]);
+      } catch (err) {
         console.error('Error fetching movies:', err);
         setError('Failed to load movies. Please try again later.');
         toast.error('Error', 'Failed to load movies');
-        setMovies([]); // Ensure movies is always an array
-      })
-      .finally(() => {
+        setMovies([]);
+      } finally {
         setLoading(false);
-      });
-  }, [filter, searchQuery, currentPage]);
+      }
+    };
+
+    fetchMovies();
+  }, [filter]);
 
   // Filter buttons configuration
   const filters = [
-    { id: 'now-showing', label: 'Now Showing' },
-    { id: 'coming-soon', label: 'Coming Soon' },
-    { id: 'top-rated', label: 'Top Rated' }
+    { id: 'now-showing', label: 'Now Showing', icon: FiClock },
+    { id: 'all-movies', label: 'All Movies', icon: FiStar },
+    { id: 'coming-soon', label: 'Coming Soon', icon: FiCalendar }
   ];
+
+  const getHeroContent = () => {
+    switch(filter) {
+      case 'now-showing':
+        return {
+          title: 'Now Showing',
+          subtitle: 'Book your tickets for the latest blockbusters in theaters now!'
+        };
+      case 'all-movies':
+        return {
+          title: 'All Movies',
+          subtitle: 'Browse our complete collection of movies'
+        };
+      case 'coming-soon':
+        return {
+          title: 'Coming Soon',
+          subtitle: 'Get ready for these exciting upcoming releases'
+        };
+      default:
+        return {
+          title: 'Movies',
+          subtitle: 'Discover your next favorite movie'
+        };
+    }
+  };
+
+  const heroContent = getHeroContent();
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-gray-900 to-gray-800 py-16">
+      <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            {searchQuery 
-              ? `Search Results for "${searchQuery}"` 
-              : filter === 'now-showing' ? 'Now Showing' 
-              : filter === 'coming-soon' ? 'Coming Soon' 
-              : 'Top Rated Movies'}
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-brand to-purple-500 bg-clip-text text-transparent">
+            {heroContent.title}
           </h1>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            {filter === 'now-showing' 
-              ? 'Book your tickets for the latest blockbusters in theaters now!'
-              : filter === 'coming-soon' 
-                ? 'Get ready for these exciting upcoming releases.'
-                : 'Highest rated movies based on audience reviews.'}
+            {heroContent.subtitle}
           </p>
         </div>
       </div>
 
       {/* Filter Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-wrap justify-center gap-2 mb-8">
-          {filters.map((f) => (
-            <Link
-              key={f.id}
-              to={`/movies?filter=${f.id}`}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${
-                filter === f.id
-                  ? 'bg-brand text-white shadow-lg shadow-brand/30'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-              }`}
-            >
-              {f.label}
-            </Link>
-          ))}
+        <div className="flex flex-wrap justify-center gap-3 mb-8">
+          {filters.map((f) => {
+            const Icon = f.icon;
+            return (
+              <Link
+                key={f.id}
+                to={`/movies?filter=${f.id}`}
+                className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 ${
+                  filter === f.id
+                    ? 'bg-brand text-white shadow-lg shadow-brand/30 scale-105'
+                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:scale-105'
+                }`}
+              >
+                <Icon size={18} />
+                {f.label}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Loading State */}
         {loading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {[...Array(5)].map((_, i) => (
+            {[...Array(10)].map((_, i) => (
               <div key={i} className="bg-gray-800 rounded-lg overflow-hidden animate-pulse">
                 <div className="aspect-[2/3] bg-gray-700"></div>
                 <div className="p-4">
@@ -167,105 +177,87 @@ export default function Movies() {
           </div>
         )}
 
-        {/* Movies Grid */}
+        {/* Content based on filter */}
         {!loading && !error && (
           <>
-            {movies.length > 0 ? (
+            {filter === 'coming-soon' ? (
+              // Coming Soon has two sections
+              <div className="space-y-16">
+                {/* Premier Shows Section */}
+                {premierMovies.length > 0 && (
+                  <div>
+                    <div className="text-center mb-8">
+                      <h2 className="text-3xl font-bold mb-2 text-purple-400">
+                        Not Today - Catch It Tomorrow!
+                      </h2>
+                      <p className="text-gray-400 text-lg">
+                        The curtain's down for now - but the show goes on tomorrow
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                      {premierMovies.map((movie) => (
+                        <MovieCard key={movie._id || movie.id} movie={movie} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Unreleased Movies Section */}
+                {unreleasedMovies.length > 0 && (
+                  <div>
+                    <div className="text-center mb-8">
+                      <h2 className="text-3xl font-bold mb-2 text-brand">
+                        Soon in Theaters
+                      </h2>
+                      <p className="text-gray-400 text-lg">
+                        New adventures land here soon - mark your calendar!
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                      {unreleasedMovies.map((movie) => (
+                        <MovieCard key={movie._id || movie.id} movie={movie} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {premierMovies.length === 0 && unreleasedMovies.length === 0 && (
+                  <div className="text-center py-12">
+                    <FiCalendar className="mx-auto h-16 w-16 text-gray-600 mb-4" />
+                    <p className="text-gray-400 text-lg">
+                      No upcoming movies announced yet. Check back soon!
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              // Now Showing and All Movies
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                  {movies.map((movie) => (
-                    <MovieCard key={movie._id || movie.id} movie={movie} />
-                  ))}
-                </div>
-                
-                {/* Pagination */}
-                {totalMovies > moviesPerPage && (
-                  <div className="mt-12 flex justify-center items-center gap-2">
-                    {/* Previous Button */}
-                    <button
-                      onClick={() => {
-                        const newParams = new URLSearchParams(searchParams);
-                        newParams.set('page', Math.max(1, currentPage - 1).toString());
-                        setSearchParams(newParams);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      disabled={currentPage === 1}
-                      className="px-4 py-2 rounded-lg bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Previous
-                    </button>
-                    
-                    {/* Page Numbers */}
-                    {(() => {
-                      const totalPages = Math.ceil(totalMovies / moviesPerPage);
-                      const pages = [];
-                      
-                      // Show max 5 page numbers
-                      let startPage = Math.max(1, currentPage - 2);
-                      let endPage = Math.min(totalPages, startPage + 4);
-                      
-                      if (endPage - startPage < 4) {
-                        startPage = Math.max(1, endPage - 4);
-                      }
-                      
-                      for (let i = startPage; i <= endPage; i++) {
-                        pages.push(
-                          <button
-                            key={i}
-                            onClick={() => {
-                              const newParams = new URLSearchParams(searchParams);
-                              newParams.set('page', i.toString());
-                              setSearchParams(newParams);
-                              window.scrollTo({ top: 0, behavior: 'smooth' });
-                            }}
-                            className={`px-4 py-2 rounded-lg transition-colors ${
-                              currentPage === i
-                                ? 'bg-brand text-white'
-                                : 'bg-gray-800 text-white hover:bg-gray-700'
-                            }`}
-                          >
-                            {i}
-                          </button>
-                        );
-                      }
-                      
-                      return pages;
-                    })()}
-                    
-                    {/* Next Button */}
-                    <button
-                      onClick={() => {
-                        const totalPages = Math.ceil(totalMovies / moviesPerPage);
-                        const newParams = new URLSearchParams(searchParams);
-                        newParams.set('page', Math.min(totalPages, currentPage + 1).toString());
-                        setSearchParams(newParams);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      disabled={currentPage >= Math.ceil(totalMovies / moviesPerPage)}
-                      className="px-4 py-2 rounded-lg bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Next
-                    </button>
-                    
-                    {/* Page Info */}
-                    <span className="ml-4 text-sm text-gray-400">
-                      Page {currentPage} of {Math.ceil(totalMovies / moviesPerPage)} ({totalMovies} movies)
-                    </span>
+                {movies.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    {movies.map((movie) => (
+                      <div key={movie._id || movie.id} className="relative">
+                        <MovieCard movie={movie} />
+                        {/* Show expired badge for movies without active shows */}
+                        {filter === 'all-movies' && movie.hasActiveShows === false && (
+                          <div className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                            EXPIRED
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <FiClock className="mx-auto h-16 w-16 text-gray-600 mb-4" />
+                    <p className="text-gray-400 text-lg">
+                      {filter === 'now-showing' 
+                        ? 'No movies currently showing. Please check back soon!'
+                        : 'No movies found.'}
+                    </p>
                   </div>
                 )}
               </>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-400">
-                  {searchQuery 
-                    ? `No movies found matching "${searchQuery}". Try different keywords.`
-                    : filter === 'now-showing' 
-                    ? 'No movies currently showing. Please check back soon!'
-                    : filter === 'coming-soon'
-                      ? 'No upcoming movies announced yet.'
-                      : 'No top-rated movies found.'}
-                </p>
-              </div>
             )}
           </>
         )}
