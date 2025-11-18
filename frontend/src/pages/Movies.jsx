@@ -1,3 +1,4 @@
+// Movies Page v3.0 - COMPLETE UI OVERHAUL - Build: 2025-01-18-v3
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { MoviesAPI } from '../lib/api';
@@ -6,6 +7,7 @@ import { toast } from '../lib/toast';
 import { FiClock, FiCalendar, FiStar, FiFilm, FiTrendingUp } from 'react-icons/fi';
 
 export default function Movies() {
+  console.log('🚀 MOVIES PAGE V3.0 LOADED - NEW UI ACTIVE');
   const [searchParams] = useSearchParams();
   const [movies, setMovies] = useState([]);
   const [premierMovies, setPremierMovies] = useState([]);
