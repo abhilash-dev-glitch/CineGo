@@ -3,128 +3,131 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { MoviesAPI } from '../lib/api';
 import MovieCard from '../components/MovieCard';
 import { toast } from '../lib/toast';
-import { FiClock, FiCalendar, FiStar } from 'react-icons/fi';
+import { FiClock, FiCalendar, FiStar, FiFilm } from 'react-icons/fi';
 
-// Movies Page v2.0 - 4 Filters: Now Showing, All Movies, New Releases, Coming Soon
 export default function Movies() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const [movies, setMovies] = useState([]);
   const [premierMovies, setPremierMovies] = useState([]);
   const [unreleasedMovies, setUnreleasedMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Get filter from URL - default to 'now-showing'
-  const filter = searchParams.get('filter') || 'now-showing';
+  // Get active filter from URL, default to 'now-showing'
+  const activeFilter = searchParams.get('filter') || 'now-showing';
+
+  // Filter configuration
+  const filterConfig = [
+    { 
+      id: 'now-showing', 
+      label: 'Now Showing', 
+      icon: FiClock,
+      description: 'Movies playing in theaters today'
+    },
+    { 
+      id: 'all-movies', 
+      label: 'All Movies', 
+      icon: FiFilm,
+      description: 'Complete movie collection'
+    },
+    { 
+      id: 'new-releases', 
+      label: 'New Releases', 
+      icon: FiStar,
+      description: 'Released in the last 7 days'
+    },
+    { 
+      id: 'coming-soon', 
+      label: 'Coming Soon', 
+      icon: FiCalendar,
+      description: 'Upcoming releases'
+    }
+  ];
 
   useEffect(() => {
-    const fetchMovies = async () => {
-      setLoading(true);
-      setError(null);
+    console.log('🎬 Movies Page - Active Filter:', activeFilter);
+    fetchMoviesData();
+  }, [activeFilter]);
 
-      try {
-        let params = {};
-        
-        switch(filter) {
-          case 'now-showing':
-            // Movies with shows available today
-            params = { view: 'active', sort: '-releaseDate' };
-            break;
-          case 'all-movies':
-            // All movies with status flags
-            params = { view: 'all-with-status', sort: '-releaseDate' };
-            break;
-          case 'new-releases':
-            // Movies released within the last 7 days
-            params = { view: 'new', sort: '-releaseDate' };
-            break;
-          case 'coming-soon':
-            // Fetch premier shows (tomorrow+) and unreleased movies
-            const [premierRes, unreleasedRes] = await Promise.all([
-              MoviesAPI.list({ view: 'premier', sort: 'releaseDate' }),
-              MoviesAPI.list({ view: 'unreleased', sort: 'releaseDate' })
-            ]);
-            setPremierMovies(Array.isArray(premierRes) ? premierRes : []);
-            setUnreleasedMovies(Array.isArray(unreleasedRes) ? unreleasedRes : []);
-            setMovies([]);
-            setLoading(false);
-            return;
-          default:
-            params = { view: 'active', sort: '-releaseDate' };
-        }
+  const fetchMoviesData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    // Reset all states
+    setMovies([]);
+    setPremierMovies([]);
+    setUnreleasedMovies([]);
 
-        const moviesData = await MoviesAPI.list(params);
+    try {
+      console.log('📡 Fetching movies for filter:', activeFilter);
+
+      if (activeFilter === 'coming-soon') {
+        // Fetch both premier and unreleased movies
+        const [premierData, unreleasedData] = await Promise.all([
+          MoviesAPI.list({ view: 'premier', sort: 'releaseDate' }),
+          MoviesAPI.list({ view: 'unreleased', sort: 'releaseDate' })
+        ]);
         
-        if (!moviesData || !Array.isArray(moviesData)) {
-          console.error('Invalid movies data received:', moviesData);
-          setError('Invalid data received from server');
-          return;
+        console.log('✅ Premier movies:', premierData?.length || 0);
+        console.log('✅ Unreleased movies:', unreleasedData?.length || 0);
+        
+        setPremierMovies(Array.isArray(premierData) ? premierData : []);
+        setUnreleasedMovies(Array.isArray(unreleasedData) ? unreleasedData : []);
+      } else {
+        // Fetch regular movies based on filter
+        const params = getAPIParams(activeFilter);
+        console.log('📤 API params:', params);
+        
+        const data = await MoviesAPI.list(params);
+        console.log('✅ Movies received:', data?.length || 0);
+        
+        if (!Array.isArray(data)) {
+          throw new Error('Invalid data format received');
         }
         
-        // Filter out invalid movie objects
-        const validMovies = moviesData.filter(movie => 
-          movie && 
-          (movie.title || movie.name) && 
-          (movie.poster || movie.image)
-        );
-        
-        setMovies(validMovies);
-        setPremierMovies([]);
-        setUnreleasedMovies([]);
-      } catch (err) {
-        console.error('Error fetching movies:', err);
-        setError('Failed to load movies. Please try again later.');
-        toast.error('Error', 'Failed to load movies');
-        setMovies([]);
-      } finally {
-        setLoading(false);
+        setMovies(data);
       }
-    };
-
-    fetchMovies();
-  }, [filter]);
-
-  // Filter buttons configuration - v2.0
-  const filters = [
-    { id: 'now-showing', label: 'Now Showing', icon: FiClock },
-    { id: 'all-movies', label: 'All Movies', icon: FiStar },
-    { id: 'new-releases', label: 'New Releases', icon: FiStar },
-    { id: 'coming-soon', label: 'Coming Soon', icon: FiCalendar }
-  ];
-  
-  console.log('Movies Page v2.0 loaded with filters:', filters.map(f => f.label));
-
-  const getHeroContent = () => {
-    switch(filter) {
-      case 'now-showing':
-        return {
-          title: 'Now Showing',
-          subtitle: 'Book your tickets for the latest blockbusters in theaters now!'
-        };
-      case 'all-movies':
-        return {
-          title: 'All Movies',
-          subtitle: 'Browse our complete collection of movies'
-        };
-      case 'new-releases':
-        return {
-          title: 'New Releases',
-          subtitle: 'Fresh from the premiere - movies released within the last week!'
-        };
-      case 'coming-soon':
-        return {
-          title: 'Coming Soon',
-          subtitle: 'Get ready for these exciting upcoming releases'
-        };
-      default:
-        return {
-          title: 'Movies',
-          subtitle: 'Discover your next favorite movie'
-        };
+    } catch (err) {
+      console.error('❌ Error fetching movies:', err);
+      setError(err.message || 'Failed to load movies');
+      toast.error('Error', 'Failed to load movies');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const heroContent = getHeroContent();
+  const getAPIParams = (filter) => {
+    const paramsMap = {
+      'now-showing': { view: 'active', sort: '-releaseDate' },
+      'all-movies': { view: 'all-with-status', sort: '-releaseDate' },
+      'new-releases': { view: 'new', sort: '-releaseDate' }
+    };
+    return paramsMap[filter] || paramsMap['now-showing'];
+  };
+
+  const getPageContent = () => {
+    const contentMap = {
+      'now-showing': {
+        title: 'Now Showing',
+        subtitle: 'Book your tickets for movies playing in theaters today!'
+      },
+      'all-movies': {
+        title: 'All Movies',
+        subtitle: 'Browse our complete collection of movies'
+      },
+      'new-releases': {
+        title: 'New Releases',
+        subtitle: 'Fresh from the premiere - released within the last week!'
+      },
+      'coming-soon': {
+        title: 'Coming Soon',
+        subtitle: 'Get ready for these exciting upcoming releases'
+      }
+    };
+    return contentMap[activeFilter] || contentMap['now-showing'];
+  };
+
+  const pageContent = getPageContent();
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -132,34 +135,45 @@ export default function Movies() {
       <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-brand to-purple-500 bg-clip-text text-transparent">
-            {heroContent.title}
+            {pageContent.title}
           </h1>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            {heroContent.subtitle}
+            {pageContent.subtitle}
           </p>
+          <div className="mt-4 text-sm text-gray-500">
+            Active Filter: <span className="text-brand font-semibold">{activeFilter}</span>
+          </div>
         </div>
       </div>
 
       {/* Filter Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-wrap justify-center gap-3 mb-8">
-          {filters.map((f) => {
-            const Icon = f.icon;
+          {filterConfig.map((filter) => {
+            const Icon = filter.icon;
+            const isActive = activeFilter === filter.id;
+            
             return (
               <Link
-                key={f.id}
-                to={`/movies?filter=${f.id}`}
+                key={filter.id}
+                to={`/movies?filter=${filter.id}`}
                 className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 ${
-                  filter === f.id
+                  isActive
                     ? 'bg-brand text-white shadow-lg shadow-brand/30 scale-105'
                     : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:scale-105'
                 }`}
+                title={filter.description}
               >
                 <Icon size={18} />
-                {f.label}
+                {filter.label}
               </Link>
             );
           })}
+        </div>
+
+        {/* Debug Info */}
+        <div className="mb-4 p-3 bg-gray-800 rounded text-xs text-gray-400 text-center">
+          Debug: Filter = {activeFilter} | Movies = {movies.length} | Premier = {premierMovies.length} | Unreleased = {unreleasedMovies.length}
         </div>
 
         {/* Loading State */}
@@ -182,7 +196,7 @@ export default function Movies() {
           <div className="text-center py-12">
             <p className="text-red-400 mb-4">{error}</p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={fetchMoviesData}
               className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark transition-colors"
             >
               Retry
@@ -190,13 +204,12 @@ export default function Movies() {
           </div>
         )}
 
-        {/* Content based on filter */}
+        {/* Content */}
         {!loading && !error && (
           <>
-            {filter === 'coming-soon' ? (
-              // Coming Soon has two sections
+            {activeFilter === 'coming-soon' ? (
               <div className="space-y-16">
-                {/* Premier Shows Section */}
+                {/* Premier Shows */}
                 {premierMovies.length > 0 && (
                   <div>
                     <div className="text-center mb-8">
@@ -204,7 +217,7 @@ export default function Movies() {
                         Not Today - Catch It Tomorrow!
                       </h2>
                       <p className="text-gray-400 text-lg">
-                        The curtain's down for now - but the show goes on tomorrow
+                        Shows starting tomorrow or later
                       </p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
@@ -215,7 +228,7 @@ export default function Movies() {
                   </div>
                 )}
 
-                {/* Unreleased Movies Section */}
+                {/* Unreleased Movies */}
                 {unreleasedMovies.length > 0 && (
                   <div>
                     <div className="text-center mb-8">
@@ -223,7 +236,7 @@ export default function Movies() {
                         Soon in Theaters
                       </h2>
                       <p className="text-gray-400 text-lg">
-                        New adventures land here soon - mark your calendar!
+                        Not yet released - coming soon!
                       </p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
@@ -238,23 +251,21 @@ export default function Movies() {
                   <div className="text-center py-12">
                     <FiCalendar className="mx-auto h-16 w-16 text-gray-600 mb-4" />
                     <p className="text-gray-400 text-lg">
-                      No upcoming movies announced yet. Check back soon!
+                      No upcoming movies at the moment
                     </p>
                   </div>
                 )}
               </div>
             ) : (
-              // Now Showing and All Movies
               <>
                 {movies.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {movies.map((movie) => (
                       <div key={movie._id || movie.id} className="relative">
                         <MovieCard movie={movie} />
-                        {/* Show expired badge for movies without active shows */}
-                        {filter === 'all-movies' && movie.hasActiveShows === false && (
+                        {activeFilter === 'all-movies' && movie.hasActiveShows === false && (
                           <div className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
-                            EXPIRED
+                            NO SHOWS
                           </div>
                         )}
                       </div>
@@ -264,9 +275,7 @@ export default function Movies() {
                   <div className="text-center py-12">
                     <FiClock className="mx-auto h-16 w-16 text-gray-600 mb-4" />
                     <p className="text-gray-400 text-lg">
-                      {filter === 'now-showing' 
-                        ? 'No movies currently showing. Please check back soon!'
-                        : 'No movies found.'}
+                      No movies found for this filter
                     </p>
                   </div>
                 )}
