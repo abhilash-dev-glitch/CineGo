@@ -22,6 +22,7 @@ const mockEmailPatterns = [
 ];
 
 // Trusted email domains (emails from these domains will be sent normally)
+// BUT: Only specific verified emails from these domains
 const trustedDomains = [
   'gmail.com',
   'yahoo.com',
@@ -35,6 +36,13 @@ const trustedDomains = [
   'mail.com',
 ];
 
+// Verified/Real email addresses (these will receive emails directly)
+const verifiedEmails = [
+  'abhilashchandra26@gmail.com',
+  'cinego305@gmail.com',
+  // Add more verified emails here as needed
+];
+
 // Fallback configuration - Multiple admin emails
 const ADMIN_EMAILS = [
   process.env.ADMIN_EMAIL_1 || 'abhilashchandra26@gmail.com',
@@ -42,6 +50,19 @@ const ADMIN_EMAILS = [
 ];
 const FALLBACK_EMAIL = ADMIN_EMAILS[0]; // Primary admin email
 const FALLBACK_PHONE = process.env.FALLBACK_PHONE || '+916282204782';
+
+/**
+ * Check if email is verified/real (not a demo account)
+ * @param {string} email - Email address to check
+ * @returns {boolean} True if verified
+ */
+function isVerifiedEmail(email) {
+  if (!email || typeof email !== 'string') {
+    return false;
+  }
+  
+  return verifiedEmails.includes(email.toLowerCase());
+}
 
 /**
  * Check if email is from a trusted domain
@@ -67,17 +88,20 @@ function isMockEmail(email) {
     return true;
   }
   
+  // If email is in verified list, it's NOT a mock email
+  if (isVerifiedEmail(email)) {
+    return false;
+  }
+  
   // Check against mock patterns
   if (mockEmailPatterns.some(pattern => pattern.test(email))) {
     return true;
   }
   
-  // Check if from untrusted domain
-  if (!isTrustedDomain(email)) {
-    return true;
-  }
-  
-  return false;
+  // Even if from trusted domain (like gmail.com), 
+  // if not in verified list, treat as mock/demo account
+  // This ensures demo accounts like ganesh@gmail.com are redirected
+  return true;
 }
 
 /**
@@ -258,6 +282,7 @@ function validateNotificationConfig() {
 module.exports = {
   isMockEmail,
   isTrustedDomain,
+  isVerifiedEmail,
   isValidGmail,
   getTargetEmail,
   isValidPhoneNumber,
@@ -269,4 +294,5 @@ module.exports = {
   FALLBACK_PHONE,
   ADMIN_EMAILS,
   trustedDomains,
+  verifiedEmails,
 };
