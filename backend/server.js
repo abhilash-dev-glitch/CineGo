@@ -1,4 +1,5 @@
 const dotenv = require('dotenv');
+const path = require('path');
 const app = require('./app');
 const connectDB = require('./config/db');
 const { connectRedis, disconnectRedis } = require('./config/redis');
@@ -8,39 +9,57 @@ const { initializeSMSService } = require('./services/sms.service');
 const { initWebSocket } = require('./config/websocket'); // Import WebSocket initializer
 
 // Load environment variables
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '.env') });
 
-// Connect to database
-connectDB();
+// Initialize server with async startup
+const startServer = async () => {
+  try {
+    // Connect to database
+    await connectDB();
 
-// Connect to Redis
-connectRedis();
+    // Connect to Redis
+    await connectRedis();
 
-// Connect to RabbitMQ
-connectRabbitMQ();
+    // Connect to RabbitMQ
+    await connectRabbitMQ();
 
-// Initialize notification services
-initializeEmailService();
-initializeSMSService();
+    // Initialize notification services
+    await initializeEmailService();
+    await initializeSMSService();
 
-// Start server
-const PORT = process.env.PORT || 3000;
-const server = app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-});
+    // Start server
+    const PORT = process.env.PORT || 3000;
+    const server = app.listen(PORT, () => {
+      console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+    });
 
-// Initialize WebSocket server
-initWebSocket(server); // <-- Corrected function name from initializeWebSocket to initWebSocket
+    // Initialize WebSocket server
+    initWebSocket(server);
+
+    return server;
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+// Start the server
+let server;
+startServer().then(s => server = s);
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
   console.log('UNHANDLED REJECTION! 💥 Shutting down...');
   console.log(err.name, err.message);
-  server.close(async () => {
-    await disconnectRedis();
-    await closeRabbitMQ();
+  if (server) {
+    server.close(async () => {
+      await disconnectRedis();
+      await closeRabbitMQ();
+      process.exit(1);
+    });
+  } else {
     process.exit(1);
-  });
+  }
 });
 
 // Handle uncaught exceptions
@@ -53,9 +72,15 @@ process.on('uncaughtException', (err) => {
 // Handle SIGTERM
 process.on('SIGTERM', async () => {
   console.log('👋 SIGTERM RECEIVED. Shutting down gracefully');
-  server.close(async () => {
+  if (server) {
+    server.close(async () => {
+      await disconnectRedis();
+      await closeRabbitMQ();
+      console.log('💥 Process terminated!');
+    });
+  } else {
     await disconnectRedis();
     await closeRabbitMQ();
     console.log('💥 Process terminated!');
-  });
+  }
 });

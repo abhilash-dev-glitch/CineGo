@@ -95,6 +95,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [view, setView] = useState('now-showing'); // 'now-showing' | 'all' | 'new' | 'upcoming'
+  const [activeSlide, setActiveSlide] = useState(1); // For hero carousel
   const carouselRef = useRef(null);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -166,6 +167,16 @@ export default function Home() {
     return () => {
       setIsMounted(false);
     };
+  }, []);
+
+  // Auto-rotate hero carousel
+  useEffect(() => {
+    const heroMovies = 3; // Total number of movies in carousel
+    const interval = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % heroMovies);
+    }, 3000); // Rotate every 3 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   // Handle hash navigation for smooth scrolling
@@ -270,7 +281,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <div className="relative h-[70vh] md:h-[80vh] overflow-hidden">
+      <div className="relative min-h-screen overflow-hidden">
         {/* Animated Background */}
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-900/90 via-gray-900/95 to-red-900/90 z-10" />
@@ -285,70 +296,145 @@ export default function Home() {
           }} />
         </div>
 
-        {/* Content */}
-        <div className="relative z-20 h-full flex items-center py-20 md:py-0">
+        {/* Content - Split Screen Layout */}
+        <div className="relative z-20 min-h-screen flex items-center py-20 lg:py-0">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="max-w-4xl mx-auto lg:mx-0">
-              {/* Badge */}
-              <div className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full mb-4 sm:mb-6 animate-fade-in">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 mr-1.5 sm:mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-                <span className="text-white text-xs sm:text-sm font-medium">Your Ultimate Movie Destination</span>
-              </div>
-
-              {/* Main Heading */}
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-4 sm:mb-6 leading-tight animate-slide-up">
-                Experience Cinema
-                <span className="block bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 bg-clip-text text-transparent mt-1 sm:mt-2">
-                  Like Never Before
-                </span>
-              </h1>
-
-              {/* Description */}
-              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-200 mb-6 sm:mb-8 leading-relaxed animate-slide-up animation-delay-200 max-w-2xl">
-                Book your favorite movies, reserve the best seats, and create unforgettable memories with CineGo.
-              </p>
-
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 animate-slide-up animation-delay-400 mb-8 sm:mb-12">
-                <Link 
-                  to="/movies" 
-                  className="group relative inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-red-600 to-pink-600 text-white text-sm sm:text-base font-semibold rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-red-500/50"
-                >
-                  <span className="relative z-10 flex items-center">
-                    Explore Movies
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-pink-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                </Link>
-                
-                <a 
-                  href="#events" 
-                  className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white text-sm sm:text-base font-semibold rounded-xl hover:bg-white/20 hover:border-white/50 transition-all duration-300"
-                >
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              {/* Left Column - Content */}
+              <div className="text-left">
+                {/* Badge */}
+                <div className="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full mb-6 animate-fade-in">
+                  <svg className="w-5 h-5 text-yellow-400 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
-                  Browse Events
-                </a>
+                  <span className="text-white text-sm font-medium">Your Ultimate Movie Destination</span>
+                </div>
+
+                {/* Main Heading */}
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black text-white mb-6 leading-tight animate-slide-up">
+                  Experience Cinema
+                  <span className="block bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 bg-clip-text text-transparent mt-2">
+                    Like Never Before
+                  </span>
+                </h1>
+
+                {/* Description */}
+                <p className="text-lg md:text-xl text-gray-300 mb-8 leading-relaxed animate-slide-up animation-delay-200 max-w-xl">
+                  Book your favorite movies, reserve the best seats, and create unforgettable memories with CineGo.
+                </p>
+
+                {/* CTA Buttons */}
+                <div className="flex flex-col sm:flex-row gap-4 animate-slide-up animation-delay-400 mb-10">
+                  <Link 
+                    to="/movies" 
+                    className="group relative inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-red-600 to-pink-600 text-white text-base font-bold rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-red-500/50"
+                  >
+                    <span className="relative z-10 flex items-center">
+                      Explore Movies
+                      <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-pink-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </Link>
+                  
+                  <a 
+                    href="#events" 
+                    className="inline-flex items-center justify-center px-8 py-4 bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white text-base font-bold rounded-xl hover:bg-white/20 hover:border-white/50 transition-all duration-300"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                    </svg>
+                    Browse Events
+                  </a>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-8 animate-fade-in animation-delay-600 max-w-lg">
+                  <div className="text-left">
+                    <div className="text-4xl md:text-5xl font-black text-white mb-2">500+</div>
+                    <div className="text-sm text-gray-400 font-semibold">Movies</div>
+                  </div>
+                  <div className="text-left">
+                    <div className="text-4xl md:text-5xl font-black text-white mb-2">50+</div>
+                    <div className="text-sm text-gray-400 font-semibold">Theaters</div>
+                  </div>
+                  <div className="text-left">
+                    <div className="text-4xl md:text-5xl font-black text-white mb-2">10K+</div>
+                    <div className="text-sm text-gray-400 font-semibold">Happy Users</div>
+                  </div>
+                </div>
               </div>
 
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-4 sm:gap-6 md:gap-8 animate-fade-in animation-delay-600 max-w-2xl">
-                <div className="text-center">
-                  <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1">500+</div>
-                  <div className="text-xs sm:text-sm text-gray-300">Movies</div>
-                </div>
-                <div className="text-center border-x border-white/20">
-                  <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1">50+</div>
-                  <div className="text-xs sm:text-sm text-gray-300">Theaters</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1">10K+</div>
-                  <div className="text-xs sm:text-sm text-gray-300">Happy Users</div>
+              {/* Right Column - Movie Carousel */}
+              <div className="hidden lg:block relative">
+                <div className="relative h-[600px] perspective-1000">
+                  {/* Featured Movie Cards Carousel - Auto-rotating */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    {[
+                      { title: 'Inception', image: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&h=600&fit=crop', rating: '8.8' },
+                      { title: 'Interstellar', image: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=400&h=600&fit=crop', rating: '8.6' },
+                      { title: 'The Dark Knight', image: 'https://images.unsplash.com/photo-1509347528160-9a9e33742cdb?w=400&h=600&fit=crop', rating: '9.0' }
+                    ].map((movie, index) => {
+                      // Calculate position relative to active slide
+                      const position = (index - activeSlide + 3) % 3;
+                      const isCenter = position === 0;
+                      const offset = position === 0 ? 0 : position === 1 ? 140 : -140;
+                      
+                      return (
+                        <div
+                          key={index}
+                          className="absolute w-64 h-96 rounded-2xl overflow-hidden shadow-2xl transition-all duration-700 ease-in-out cursor-pointer hover:scale-105"
+                          style={{
+                            transform: `translateX(${offset}px) translateZ(${isCenter ? '50px' : '0'}) scale(${isCenter ? '1.1' : '0.85'})`,
+                            zIndex: isCenter ? 30 : 20 - Math.abs(offset),
+                            opacity: isCenter ? 1 : 0.5
+                          }}
+                          onClick={() => setActiveSlide(index)}
+                        >
+                          <img 
+                            src={movie.image} 
+                            alt={movie.title} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.src = 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963f?w=400&h=600&fit=crop';
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+                          <div className="absolute bottom-0 left-0 right-0 p-6">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-yellow-400 text-lg">★</span>
+                              <span className="text-white font-bold text-lg">{movie.rating}</span>
+                            </div>
+                            <h3 className="text-white text-xl font-bold">{movie.title}</h3>
+                          </div>
+                          {isCenter && (
+                            <div className="absolute top-4 right-4 bg-brand text-white text-xs font-bold px-3 py-1 rounded-full animate-pulse">
+                              NOW SHOWING
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Carousel Indicators */}
+                  <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-40">
+                    {[0, 1, 2].map((index) => (
+                      <button
+                        key={index}
+                        onClick={() => setActiveSlide(index)}
+                        className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                          activeSlide === index ? 'bg-brand w-8' : 'bg-white/50 hover:bg-white/80'
+                        }`}
+                        aria-label={`Go to slide ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                  
+                  {/* Decorative Elements */}
+                  <div className="absolute -top-10 -right-10 w-40 h-40 bg-brand/20 rounded-full blur-3xl animate-pulse" />
+                  <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl animate-pulse animation-delay-2000" />
                 </div>
               </div>
             </div>

@@ -247,9 +247,13 @@ export default function Movies() {
 
                 {premierMovies.length === 0 && unreleasedMovies.length === 0 && (
                   <div className="text-center py-20">
-                    <FiCalendar className="mx-auto h-24 w-24 text-gray-600 mb-6" />
-                    <p className="text-gray-400 text-2xl font-bold">No upcoming movies yet</p>
-                    <p className="text-gray-500 mt-2">Check back soon for new announcements!</p>
+                    <div className="inline-block p-6 bg-gradient-to-br from-orange-500/20 to-purple-500/20 rounded-full mb-6">
+                      <FiCalendar className="w-20 h-20 text-orange-400" />
+                    </div>
+                    <h3 className="text-3xl font-black text-white mb-3">All Caught Up!</h3>
+                    <p className="text-gray-400 text-lg max-w-md mx-auto">
+                      No upcoming premieres at the moment. Check back soon for exciting new releases!
+                    </p>
                   </div>
                 )}
               </div>
@@ -275,9 +279,39 @@ export default function Movies() {
                   </div>
                 ) : (
                   <div className="text-center py-20">
-                    <div className="text-6xl mb-6">🎬</div>
-                    <p className="text-gray-400 text-2xl font-bold">No movies found</p>
-                    <p className="text-gray-500 mt-2">Try a different filter</p>
+                    {activeFilter === 'now-showing' && (
+                      <>
+                        <div className="inline-block p-6 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-full mb-6">
+                          <FiClock className="w-20 h-20 text-green-400" />
+                        </div>
+                        <h3 className="text-3xl font-black text-white mb-3">Next Screening Starts Tomorrow</h3>
+                        <p className="text-gray-400 text-lg max-w-md mx-auto">
+                          All today's shows are complete. Check out tomorrow's schedule or explore upcoming releases!
+                        </p>
+                      </>
+                    )}
+                    {activeFilter === 'all-movies' && (
+                      <>
+                        <div className="inline-block p-6 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-full mb-6">
+                          <FiFilm className="w-20 h-20 text-blue-400" />
+                        </div>
+                        <h3 className="text-3xl font-black text-white mb-3">No Movies Available</h3>
+                        <p className="text-gray-400 text-lg max-w-md mx-auto">
+                          Our collection is being updated. Please check back soon for new additions!
+                        </p>
+                      </>
+                    )}
+                    {activeFilter === 'new-releases' && (
+                      <>
+                        <div className="inline-block p-6 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full mb-6">
+                          <FiTrendingUp className="w-20 h-20 text-purple-400" />
+                        </div>
+                        <h3 className="text-3xl font-black text-white mb-3">No New Releases This Week</h3>
+                        <p className="text-gray-400 text-lg max-w-md mx-auto">
+                          Stay tuned! Fresh movies are coming soon to theaters near you.
+                        </p>
+                      </>
+                    )}
                   </div>
                 )}
               </>

@@ -3,6 +3,7 @@ const Theater = require('../models/Theater');
 const Movie = require('../models/Movie');
 const AppError = require('../utils/appError');
 const APIFeatures = require('../utils/apiFeatures');
+const { addStatusToShowtimes, sortShowtimesByStatus } = require('../utils/calculateShowtimeStatus');
 
 // @desc    Get current showtimes (shows happening now ± 1 hour)
 // @route   GET /api/v1/showtimes/current
@@ -124,9 +125,15 @@ exports.getAllShowtimes = async (req, res, next) => {
       .limitFields()
       .paginate();
 
-    const showtimes = await features.query
+    let showtimes = await features.query
       .populate('movie', 'title duration poster')
       .populate('theater', 'name location');
+
+    // Add real-time status to each showtime
+    showtimes = addStatusToShowtimes(showtimes);
+    
+    // Sort by status priority (live shows first)
+    showtimes = sortShowtimesByStatus(showtimes);
 
     res.status(200).json({
       status: 'success',
@@ -145,13 +152,17 @@ exports.getAllShowtimes = async (req, res, next) => {
 // @access  Public
 exports.getShowtime = async (req, res, next) => {
   try {
-    const showtime = await Showtime.findById(req.params.id)
+    let showtime = await Showtime.findById(req.params.id)
       .populate('movie', 'title duration poster')
       .populate('theater', 'name location screens');
 
     if (!showtime) {
       return next(new AppError('No showtime found with that ID', 404));
     }
+
+    // Add real-time status
+    const showtimesWithStatus = addStatusToShowtimes([showtime]);
+    showtime = showtimesWithStatus[0];
 
     res.status(200).json({
       status: 'success',
@@ -164,7 +175,7 @@ exports.getShowtime = async (req, res, next) => {
   }
 };
 
-// @desc    Create new showtime
+// @desc    Create new showtime (supports multi-day shows)
 // @route   POST /api/v1/showtimes
 // @access  Private/Admin
 exports.createShowtime = async (req, res, next) => {
@@ -194,48 +205,116 @@ exports.createShowtime = async (req, res, next) => {
       );
     }
 
-    // Check for overlapping showtimes
-    const overlappingShowtime = await Showtime.findOne({
-      theater,
-      screen,
-      $or: [
-        {
-          startTime: { $lt: new Date(endTime) },
-          endTime: { $gt: new Date(startTime) },
-        },
-      ],
-    });
-
-    if (overlappingShowtime) {
-      return next(
-        new AppError(
-          'There is already a show scheduled in this screen during the requested time',
-          400
-        )
-      );
-    }
-
-    // Get screen capacity or use provided availableSeats
+    // Get screen capacity
     const screenData = theaterExists.screens.find(
       (s) => s.name === screen || s._id.toString() === screen
     );
     
-    const newShowtime = await Showtime.create({
-      movie,
-      theater,
-      screen,
-      startTime,
-      endTime,
-      endDate: req.body.endDate || endTime, // Use provided endDate or default to endTime
-      price,
-      availableSeats: req.body.availableSeats || screenData.capacity,
-      isActive: req.body.isActive !== undefined ? req.body.isActive : true,
-    });
+    // Parse dates
+    const showStartTime = new Date(startTime);
+    const showEndTime = new Date(endTime);
+    const endDate = req.body.endDate ? new Date(req.body.endDate) : null;
+    
+    // Generate showtimes for date range
+    const showtimesToCreate = [];
+    
+    if (endDate && endDate > showStartTime) {
+      // Multi-day show: Generate one showtime per day
+      const maxDays = 90; // Limit to 90 days to prevent abuse
+      let currentDate = new Date(showStartTime);
+      currentDate.setHours(0, 0, 0, 0);
+      
+      const endDateOnly = new Date(endDate);
+      endDateOnly.setHours(23, 59, 59, 999);
+      
+      let dayCount = 0;
+      
+      while (currentDate <= endDateOnly && dayCount < maxDays) {
+        // Create show for this day with same time
+        const dayShowStart = new Date(currentDate);
+        dayShowStart.setHours(showStartTime.getHours(), showStartTime.getMinutes(), 0, 0);
+        
+        const dayShowEnd = new Date(dayShowStart);
+        dayShowEnd.setHours(showEndTime.getHours(), showEndTime.getMinutes(), 0, 0);
+        
+        // Check for overlapping showtimes on this specific day
+        const overlapping = await Showtime.findOne({
+          theater,
+          screen,
+          startTime: { $lt: dayShowEnd },
+          endTime: { $gt: dayShowStart },
+        });
+        
+        if (overlapping) {
+          return next(
+            new AppError(
+              `Show conflicts with existing show on ${dayShowStart.toDateString()} at ${overlapping.startTime.toLocaleTimeString()}`,
+              400
+            )
+          );
+        }
+        
+        showtimesToCreate.push({
+          movie,
+          theater,
+          screen,
+          startTime: dayShowStart,
+          endTime: dayShowEnd,
+          price,
+          availableSeats: req.body.availableSeats || screenData.capacity,
+          totalSeats: req.body.availableSeats || screenData.capacity,
+          isActive: req.body.isActive !== undefined ? req.body.isActive : true,
+        });
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+        dayCount++;
+      }
+      
+      if (dayCount >= maxDays) {
+        return next(
+          new AppError('Cannot create shows for more than 90 days at once', 400)
+        );
+      }
+    } else {
+      // Single show
+      const overlapping = await Showtime.findOne({
+        theater,
+        screen,
+        startTime: { $lt: showEndTime },
+        endTime: { $gt: showStartTime },
+      });
+      
+      if (overlapping) {
+        return next(
+          new AppError(
+            'There is already a show scheduled in this screen during the requested time',
+            400
+          )
+        );
+      }
+      
+      showtimesToCreate.push({
+        movie,
+        theater,
+        screen,
+        startTime: showStartTime,
+        endTime: showEndTime,
+        price,
+        availableSeats: req.body.availableSeats || screenData.capacity,
+        totalSeats: req.body.availableSeats || screenData.capacity,
+        isActive: req.body.isActive !== undefined ? req.body.isActive : true,
+      });
+    }
+    
+    // Create all showtimes
+    const createdShowtimes = await Showtime.insertMany(showtimesToCreate);
 
     res.status(201).json({
       status: 'success',
+      message: `Successfully created ${createdShowtimes.length} showtime(s)`,
       data: {
-        showtime: newShowtime,
+        showtimes: createdShowtimes,
+        count: createdShowtimes.length,
       },
     });
   } catch (error) {

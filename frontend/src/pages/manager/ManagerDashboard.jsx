@@ -4,6 +4,7 @@ import { api } from '../../lib/api';
 import { toast } from '../../lib/toast';
 import { FiHome, FiFilm, FiCalendar, FiTrendingUp, FiLoader } from 'react-icons/fi';
 import { format } from 'date-fns';
+import { useWebSocket } from '../../hooks/useWebSocket';
 
 export default function ManagerDashboard() {
   const location = useLocation();
@@ -26,71 +27,91 @@ export default function ManagerDashboard() {
     cancelledBookings: 0,
   });
 
-  // Fetch all data needed for the child components
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        // Fetch the theaters this manager is assigned to
-        const theaterRes = await api.get('/users/my-theaters');
-        const theaters = theaterRes.data.data.theaters || [];
-        setMyTheaters(theaters);
+  // Load initial data
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      // Fetch the theaters this manager is assigned to
+      const theaterRes = await api.get('/users/my-theaters');
+      const theaters = theaterRes.data.data.theaters || [];
+      setMyTheaters(theaters);
 
-        // Fetch all movies for the "Add Show" dropdown
-        const movieRes = await api.get('/movies');
-        setMovies(movieRes.data.data.movies || []);
+      // Fetch all movies for the "Add Show" dropdown
+      const movieRes = await api.get('/movies');
+      setMovies(movieRes.data.data.movies || []);
 
-        // Fetch all showtimes for assigned theaters
-        const allShowtimes = [];
-        for (const theater of theaters) {
-          try {
-            const showRes = await api.get(`/theaters/${theater._id}/showtimes`);
-            const showtimes = showRes.data.data.showtimes || [];
-            allShowtimes.push(...showtimes.map(show => ({ ...show, theaterName: theater.name })));
-          } catch (err) {
-            console.error(`Error loading shows for theater ${theater._id}:`, err);
-          }
-        }
-        setAllShows(allShowtimes);
-
-        // Calculate stats
-        const now = new Date();
-        const upcomingShows = allShowtimes.filter(show => new Date(show.startTime) > now);
-        const activeShows = allShowtimes.filter(show => {
-          const start = new Date(show.startTime);
-          const end = new Date(show.endTime);
-          return start <= now && end >= now;
-        });
-
-        setStats({
-          totalTheaters: theaters.length,
-          totalShows: allShowtimes.length,
-          upcomingShows: upcomingShows.length,
-          activeShows: activeShows.length,
-        });
-
-        // Fetch bookings for managed theaters
+      // Fetch all showtimes for assigned theaters
+      const allShowtimes = [];
+      for (const theater of theaters) {
         try {
-          const bookingsRes = await api.get('/bookings/my-theaters-bookings');
-          setBookings(bookingsRes.data.data.bookings || []);
-          setBookingStats(bookingsRes.data.data.stats || {
-            totalBookings: 0,
-            totalRevenue: 0,
-            paidBookings: 0,
-            pendingBookings: 0,
-            cancelledBookings: 0,
-          });
+          const showRes = await api.get(`/theaters/${theater._id}/showtimes`);
+          const showtimes = showRes.data.data.showtimes || [];
+          allShowtimes.push(...showtimes.map(show => ({ ...show, theaterName: theater.name })));
         } catch (err) {
-          console.error('Error loading bookings:', err);
+          console.error(`Error loading shows for theater ${theater._id}:`, err);
         }
-      } catch (err) {
-        toast.error('Failed to load manager data', err.response?.data?.message);
-      } finally {
-        setLoading(false);
       }
-    };
+      setAllShows(allShowtimes);
+
+      // Calculate stats
+      const now = new Date();
+      const upcomingShows = allShowtimes.filter(show => new Date(show.startTime) > now);
+      const activeShows = allShowtimes.filter(show => {
+        const start = new Date(show.startTime);
+        const end = new Date(show.endTime);
+        return start <= now && end >= now;
+      });
+
+      setStats({
+        totalTheaters: theaters.length,
+        totalShows: allShowtimes.length,
+        upcomingShows: upcomingShows.length,
+        activeShows: activeShows.length,
+      });
+
+      // Fetch bookings for managed theaters
+      try {
+        const bookingsRes = await api.get('/bookings/my-theaters-bookings');
+        setBookings(bookingsRes.data.data.bookings || []);
+        setBookingStats(bookingsRes.data.data.stats || {
+          totalBookings: 0,
+          totalRevenue: 0,
+          paidBookings: 0,
+          pendingBookings: 0,
+          cancelledBookings: 0,
+        });
+      } catch (err) {
+        console.error('Error loading bookings:', err);
+      }
+    } catch (err) {
+      toast.error('Failed to load manager data', err.response?.data?.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
     loadData();
   }, []);
+
+  // WebSocket for real-time updates
+  useWebSocket((event) => {
+    if (!event?.type) return;
+
+    // Reload data on relevant events
+    if (
+      event.type === 'booking:created' ||
+      event.type === 'booking:updated' ||
+      event.type === 'booking:cancelled' ||
+      event.type === 'showtime:created' ||
+      event.type === 'showtime:updated' ||
+      event.type === 'showtime:deleted'
+    ) {
+      console.log('🔄 Real-time update received:', event.type);
+      loadData();
+    }
+  });
 
   const navItems = [
     { name: 'Overview', path: '/manager' },

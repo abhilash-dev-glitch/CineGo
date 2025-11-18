@@ -5,6 +5,7 @@ const Showtime = require('../models/Showtime');
  * Update movie statuses based on their showtimes
  * - Set to 'inactive' if all shows are in the past
  * - Set to 'active' if there are current or future shows
+ * This runs as a background job every 5 minutes
  */
 async function updateMovieStatuses() {
   try {

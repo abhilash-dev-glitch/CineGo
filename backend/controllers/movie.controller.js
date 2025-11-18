@@ -3,6 +3,7 @@ const Showtime = require('../models/Showtime');
 const AppError = require('../utils/appError');
 const APIFeatures = require('../utils/apiFeatures');
 const { uploadBufferToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
+const { calculateMultipleMovieStatuses } = require('../utils/calculateMovieStatus');
 
 // @desc    Get all movies
 // @route   GET /api/v1/movies
@@ -197,11 +198,30 @@ exports.getAllMovies = async (req, res, next) => {
       });
     }
 
+    // Calculate real-time show status for all movies
+    const movieIds = movies.map(m => m._id);
+    const statusMap = await calculateMultipleMovieStatuses(movieIds);
+    
+    // Add real-time status flags to each movie
+    const moviesWithStatus = movies.map(movie => {
+      const movieObj = movie.toObject ? movie.toObject() : movie;
+      const status = statusMap[movie._id.toString()] || {
+        hasActiveShows: false,
+        hasShowsTomorrow: false,
+        hasFutureShows: false,
+      };
+      
+      return {
+        ...movieObj,
+        ...status,
+      };
+    });
+
     res.status(200).json({
       status: 'success',
-      results: movies.length,
+      results: moviesWithStatus.length,
       data: {
-        movies,
+        movies: moviesWithStatus,
       },
     });
   } catch (error) {

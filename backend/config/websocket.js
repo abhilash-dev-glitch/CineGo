@@ -33,16 +33,17 @@ const initWebSocket = (server) => {
       const decoded = verifyToken(token);
       const user = await User.findById(decoded.id);
 
-      // Only allow admins to connect to the dashboard websocket
-      if (!user || user.role !== 'admin') {
-        console.log('WebSocket: Connection rejected (invalid user or not admin)');
+      // Allow admins and theater managers to connect
+      if (!user || (user.role !== 'admin' && user.role !== 'theater_manager')) {
+        console.log('WebSocket: Connection rejected (invalid user or unauthorized role)');
         ws.terminate();
         return;
       }
 
-      console.log('WebSocket: Admin client connected');
+      console.log(`WebSocket: ${user.role} client connected (${user.name})`);
       ws.isAlive = true;
-      ws.role = 'admin';
+      ws.role = user.role;
+      ws.userId = user._id.toString();
 
       ws.on('pong', () => {
         ws.isAlive = true;
@@ -53,7 +54,7 @@ const initWebSocket = (server) => {
       });
 
       ws.on('close', () => {
-        console.log('WebSocket: Admin client disconnected');
+        console.log(`WebSocket: ${user.role} client disconnected`);
       });
 
       ws.on('error', (error) => {
@@ -82,7 +83,7 @@ const initWebSocket = (server) => {
 };
 
 /**
- * Broadcasts a message to all connected admin clients.
+ * Broadcasts a message to all connected admin and manager clients.
  * @param {object} data The data to send (will be JSON.stringified)
  */
 const broadcast = (data) => {
@@ -93,7 +94,7 @@ const broadcast = (data) => {
 
   const message = JSON.stringify(data);
   wss.clients.forEach((client) => {
-    if (client.role === 'admin' && client.readyState === client.OPEN) {
+    if ((client.role === 'admin' || client.role === 'theater_manager') && client.readyState === client.OPEN) {
       client.send(message);
     }
   });

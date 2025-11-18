@@ -85,15 +85,30 @@ export default function Showtimes(){
     const d = new Date(); d.setDate(d.getDate()+i)
     const key = d.toISOString().slice(0,10)
     const isToday = i===0
-    const label = d.toLocaleDateString(undefined,{weekday:'short'})
+    const isTomorrow = i===1
+    const isDayAfter = i===2
+    const label = isToday ? 'Today' : isTomorrow ? 'Tomorrow' : isDayAfter ? 'Day After' : d.toLocaleDateString(undefined,{weekday:'short'})
     const dayNum = d.getDate().toString().padStart(2,'0')
     const mon = d.toLocaleDateString(undefined,{month:'short'})
-    return {key,isToday,label,dayNum,mon}
+    return {key,isToday,isTomorrow,isDayAfter,label,dayNum,mon}
   })
 
-  const filteredByDate = useMemo(()=>
-    showtimes.filter(st=> new Date(st.startTime).toISOString().slice(0,10) === selectedDate)
-  ,[showtimes, selectedDate])
+  const filteredByDate = useMemo(() => {
+    return showtimes.filter(st => {
+      const showDate = new Date(st.startTime).toISOString().slice(0,10);
+      
+      // Direct match (new shows)
+      if (showDate === selectedDate) return true;
+      
+      // Fallback for old multi-day shows with endDate
+      if (st.endDate) {
+        const endDate = new Date(st.endDate).toISOString().slice(0,10);
+        return selectedDate >= showDate && selectedDate <= endDate;
+      }
+      
+      return false;
+    });
+  }, [showtimes, selectedDate])
 
   const filteredByPrice = useMemo(()=>{
     if (priceParam === 'all') return filteredByDate
@@ -204,17 +219,37 @@ export default function Showtimes(){
         )}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto no-scrollbar py-2">
-        {days.map((d)=> (
-          <button
-            key={d.key}
-            onClick={()=> setSelectedDate(d.key)}
-            className={`min-w-[68px] px-3 py-2 rounded-lg border text-left transition ${selectedDate===d.key ? 'bg-white/15 border-white/25 shadow-sm' : 'border-white/10 bg-white/[0.04] hover:bg-white/10 hover:border-white/25 hover:shadow'}`}
-          >
-            <div className="text-[10px] uppercase tracking-wide opacity-75">{d.label}</div>
-            <div className="text-lg font-semibold">{d.dayNum} <span className="text-xs font-normal align-top">{d.mon}</span></div>
-          </button>
-        ))}
+      <div className="flex gap-3 overflow-x-auto no-scrollbar py-4">
+        {days.map((d)=> {
+          const isSelected = selectedDate===d.key
+          const isSpecial = d.isToday || d.isTomorrow || d.isDayAfter
+          return (
+            <button
+              key={d.key}
+              onClick={()=> setSelectedDate(d.key)}
+              className={`min-w-[90px] px-4 py-3 rounded-xl border-2 text-center transition-all duration-300 transform hover:scale-105 ${
+                isSelected 
+                  ? isSpecial
+                    ? 'bg-gradient-to-br from-brand to-pink-600 border-brand text-white shadow-lg shadow-brand/50' 
+                    : 'bg-white/15 border-white/30 text-white shadow-lg'
+                  : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 hover:shadow-md'
+              }`}
+            >
+              <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${isSelected ? 'text-white' : 'text-white/70'}`}>
+                {d.label}
+              </div>
+              <div className={`text-2xl font-black ${isSelected ? 'text-white' : 'text-white/90'}`}>
+                {d.dayNum}
+              </div>
+              <div className={`text-xs font-medium ${isSelected ? 'text-white/90' : 'text-white/60'}`}>
+                {d.mon}
+              </div>
+              {isSpecial && !isSelected && (
+                <div className="mt-1 w-2 h-2 bg-brand rounded-full mx-auto"></div>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-white/10 pt-4 text-xs">
@@ -281,8 +316,40 @@ export default function Showtimes(){
         >Reset filters</button>
       </div>
 
-      {theaterGroups.map(group => (
-        <div key={group.theater?._id || 't'} className="rounded-xl border border-white/10 bg-white/5 mt-6">
+      {theaterGroups.length === 0 ? (
+        <div className="mt-10 text-center py-20">
+          <div className="inline-block p-8 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full mb-6">
+            <svg className="w-24 h-24 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+            </svg>
+          </div>
+          <h3 className="text-3xl font-black text-white mb-4">
+            {days.find(d => d.key === selectedDate)?.isToday 
+              ? "No Shows Available Today" 
+              : days.find(d => d.key === selectedDate)?.isTomorrow
+              ? "No Shows Scheduled for Tomorrow"
+              : "No Shows Available on This Date"}
+          </h3>
+          <p className="text-gray-400 text-lg max-w-md mx-auto mb-8">
+            {days.find(d => d.key === selectedDate)?.isToday 
+              ? "All today's screenings are complete. Check tomorrow's schedule or try different filters." 
+              : "This movie doesn't have any screenings scheduled for this date. Try selecting a different date or check back later."}
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            {days.slice(0, 3).map((d) => (
+              <button
+                key={d.key}
+                onClick={() => setSelectedDate(d.key)}
+                className="px-6 py-3 bg-gradient-to-r from-brand to-pink-600 hover:from-brand-dark hover:to-pink-700 text-white font-bold rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-brand/50"
+              >
+                Check {d.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        theaterGroups.map(group => (
+          <div key={group.theater?._id || 't'} className="rounded-xl border border-white/10 bg-white/5 mt-6">
           <div className="p-4 flex items-start justify-between">
             <div className="flex items-center gap-3">
               {group.theater?.logo && (
@@ -320,7 +387,8 @@ export default function Showtimes(){
             </div>
           </div>
         </div>
-      ))}
+        ))
+      )}
 
       {related.length > 0 && (
         <div className="mt-10">
