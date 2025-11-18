@@ -5,6 +5,7 @@ import MovieCard from '../components/MovieCard';
 import { toast } from '../lib/toast';
 import { FiClock, FiCalendar, FiStar } from 'react-icons/fi';
 
+// Updated Movies Page with 4 filters: Now Showing, All Movies, New Releases, Coming Soon
 export default function Movies() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [movies, setMovies] = useState([]);
@@ -13,7 +14,7 @@ export default function Movies() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Get filter from URL
+  // Get filter from URL - default to 'now-showing'
   const filter = searchParams.get('filter') || 'now-showing';
 
   useEffect(() => {
