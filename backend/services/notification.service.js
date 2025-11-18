@@ -143,11 +143,33 @@ const sendNotificationSync = async (type, data, options = {}) => {
  * Send booking confirmation
  */
 const sendBookingConfirmation = async (booking, user, options = {}) => {
-  return await queueNotification(
-    NOTIFICATION_TYPES.BOOKING_CONFIRMATION,
-    { booking, user },
-    { email: true, sms: options.sms || false }
-  );
+  // Try queue first, but send synchronously if queue fails
+  try {
+    const result = await queueNotification(
+      NOTIFICATION_TYPES.BOOKING_CONFIRMATION,
+      { booking, user },
+      { email: true, sms: options.sms || false }
+    );
+    
+    // If not queued, send synchronously
+    if (!result.queued) {
+      console.log('📧 Sending booking confirmation synchronously');
+      return await sendNotificationSync(
+        NOTIFICATION_TYPES.BOOKING_CONFIRMATION,
+        { booking, user },
+        { email: true, sms: options.sms || false }
+      );
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('❌ Queue error, sending synchronously:', error.message);
+    return await sendNotificationSync(
+      NOTIFICATION_TYPES.BOOKING_CONFIRMATION,
+      { booking, user },
+      { email: true, sms: options.sms || false }
+    );
+  }
 };
 
 /**
@@ -176,11 +198,33 @@ const sendBookingReminder = async (booking, user, options = {}) => {
  * Send cancellation notification
  */
 const sendCancellationNotification = async (booking, user, options = {}) => {
-  return await queueNotification(
-    NOTIFICATION_TYPES.BOOKING_CANCELLATION,
-    { booking, user },
-    { email: true, sms: options.sms || false }
-  );
+  // Try queue first, but send synchronously if queue fails
+  try {
+    const result = await queueNotification(
+      NOTIFICATION_TYPES.BOOKING_CANCELLATION,
+      { booking, user },
+      { email: true, sms: options.sms || false }
+    );
+    
+    // If not queued, send synchronously
+    if (!result.queued) {
+      console.log('📧 Sending cancellation notification synchronously');
+      return await sendNotificationSync(
+        NOTIFICATION_TYPES.BOOKING_CANCELLATION,
+        { booking, user },
+        { email: true, sms: options.sms || false }
+      );
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('❌ Queue error, sending synchronously:', error.message);
+    return await sendNotificationSync(
+      NOTIFICATION_TYPES.BOOKING_CANCELLATION,
+      { booking, user },
+      { email: true, sms: options.sms || false }
+    );
+  }
 };
 
 /**
