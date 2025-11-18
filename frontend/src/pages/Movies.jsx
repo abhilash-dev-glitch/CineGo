@@ -33,6 +33,10 @@ export default function Movies() {
             // All movies with status flags
             params = { view: 'all-with-status', sort: '-releaseDate' };
             break;
+          case 'new-releases':
+            // Movies released within the last 7 days
+            params = { view: 'new', sort: '-releaseDate' };
+            break;
           case 'coming-soon':
             // Fetch premier shows (tomorrow+) and unreleased movies
             const [premierRes, unreleasedRes] = await Promise.all([
@@ -83,6 +87,7 @@ export default function Movies() {
   const filters = [
     { id: 'now-showing', label: 'Now Showing', icon: FiClock },
     { id: 'all-movies', label: 'All Movies', icon: FiStar },
+    { id: 'new-releases', label: 'New Releases', icon: FiStar },
     { id: 'coming-soon', label: 'Coming Soon', icon: FiCalendar }
   ];
 
@@ -97,6 +102,11 @@ export default function Movies() {
         return {
           title: 'All Movies',
           subtitle: 'Browse our complete collection of movies'
+        };
+      case 'new-releases':
+        return {
+          title: 'New Releases',
+          subtitle: 'Fresh from the premiere - movies released within the last week!'
         };
       case 'coming-soon':
         return {
