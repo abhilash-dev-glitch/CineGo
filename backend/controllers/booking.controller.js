@@ -418,15 +418,31 @@ exports.updatePaymentStatus = async (req, res, next) => {
       }
     }
 
-    // Broadcast if payment is successful
+    // Send notification and broadcast if payment is successful
     if (paymentStatus === 'paid' && oldStatus !== 'paid') {
       const populatedBooking = await Booking.findById(booking._id)
-        .populate('user', 'name email')
+        .populate('user', 'name email phone')
         .populate({
           path: 'showtime',
-          populate: { path: 'movie', select: 'title' },
+          populate: {
+            path: 'movie theater',
+            select: 'title duration poster name location',
+          },
         });
       
+      console.log('💳 Payment confirmed! Sending booking confirmation...');
+      console.log('User:', populatedBooking.user.name, populatedBooking.user.email);
+      
+      // Send booking confirmation notification
+      sendBookingConfirmation(populatedBooking, populatedBooking.user, { sms: true })
+        .then(result => {
+          console.log('✅ Payment confirmation notification sent:', result);
+        })
+        .catch(err => {
+          console.error('❌ Error sending payment confirmation notification:', err);
+        });
+      
+      // Broadcast WebSocket event
       broadcast({
         type: 'BOOKING_PAID',
         data: populatedBooking,
