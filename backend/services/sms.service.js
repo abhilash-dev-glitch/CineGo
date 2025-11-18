@@ -89,7 +89,7 @@ const sendBookingReminderSMS = async (booking, user) => {
  * Send cancellation SMS
  */
 const sendCancellationSMS = async (booking, user) => {
-  const message = `Your booking ${booking._id} for "${booking.showtime.movie.title}" has been cancelled. Refund of ₹${booking.totalAmount} will be processed within 5-7 business days.`;
+  const message = `Hi ${user.name}, your booking ${booking._id} for "${booking.showtime.movie.title}" has been cancelled. Refund of ₹${booking.totalAmount} will be processed within 5-7 business days. - CineGo`;
   
   return await sendSMS(user.phone, message);
 };
