@@ -5,56 +5,78 @@ import { MoviesAPI } from '../lib/api';
 import MovieCard from '../components/MovieCard';
 import { toast } from '../lib/toast';
 
-// Event Card Component
+// Modern Event Card Component
 const EventCard = ({ event, type = 'event' }) => {
   const badgeColors = {
-    concert: 'bg-pink-500',
-    theater: 'bg-purple-500',
-    sports: 'bg-blue-500',
-    default: 'bg-gray-500'
+    concert: 'from-pink-500 to-rose-600',
+    theater: 'from-purple-500 to-indigo-600',
+    sports: 'from-blue-500 to-cyan-600',
+    default: 'from-gray-500 to-gray-600'
   };
 
   return (
-    <div className={`event-card ${type} mx-3 flex-shrink-0`}>
-      <div className="relative h-48 overflow-hidden">
-        <img 
-          src={event.image} 
-          alt={event.title}
-          className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-        {event.badge && (
-          <div className="event-badge text-white">
-            {event.badge}
+    <div className="group flex-shrink-0 w-80 mx-3">
+      <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10 hover:border-brand/50 transition-all duration-300 hover:shadow-2xl hover:shadow-brand/20 hover:-translate-y-1">
+        {/* Image Section */}
+        <div className="relative h-56 overflow-hidden">
+          <img 
+            src={event.image} 
+            alt={event.title}
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            onError={(e) => {
+              e.target.src = 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=600&h=400&fit=crop';
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+          
+          {/* Type Badge */}
+          <div className="absolute top-3 left-3">
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-gradient-to-r ${badgeColors[type] || badgeColors.default} text-white rounded-full shadow-lg`}>
+              {type === 'concert' && '🎵'}
+              {type === 'theater' && '🎭'}
+              {type === 'sports' && '⚽'}
+              {type.toUpperCase()}
+            </span>
           </div>
-        )}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <span className={`inline-block px-3 py-1 text-xs font-semibold ${badgeColors[type] || badgeColors.default} text-white rounded-full`}>
-            {event.type}
-          </span>
+          
+          {/* Special Badge */}
+          {event.badge && (
+            <div className="absolute top-3 right-3">
+              <span className="inline-block px-3 py-1.5 text-xs font-bold bg-yellow-500 text-black rounded-full shadow-lg">
+                {event.badge}
+              </span>
+            </div>
+          )}
         </div>
-      </div>
-      <div className="p-5">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="text-lg font-bold text-white line-clamp-2">{event.title}</h3>
-          <span className="text-brand font-bold whitespace-nowrap ml-2">{event.price}</span>
-        </div>
-        <div className="flex items-center text-sm text-gray-400 mb-4">
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          <span className="truncate">{event.location}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center text-sm text-gray-300">
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span>{event.date}</span>
+
+        {/* Content Section */}
+        <div className="p-5">
+          <div className="flex justify-between items-start mb-3">
+            <h3 className="text-lg font-bold text-white line-clamp-2 group-hover:text-brand transition-colors flex-1">
+              {event.title}
+            </h3>
+            <span className="text-brand font-bold text-lg whitespace-nowrap ml-3">{event.price}</span>
           </div>
-          <button className="px-4 py-2 bg-brand hover:bg-brand/90 text-white text-sm font-medium rounded-lg transition-colors">
-            Get Tickets
+          
+          <div className="space-y-2 mb-4">
+            <div className="flex items-center text-sm text-gray-400">
+              <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span className="truncate">{event.location}</span>
+            </div>
+            
+            <div className="flex items-center text-sm text-gray-300">
+              <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>{event.date}</span>
+            </div>
+          </div>
+          
+          <button className="w-full px-4 py-2.5 bg-gradient-to-r from-brand to-pink-600 hover:from-brand-dark hover:to-pink-700 text-white text-sm font-bold rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-brand/50 transform hover:scale-105">
+            Get Tickets →
           </button>
         </div>
       </div>
@@ -463,27 +485,48 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Animated Events Carousel */}
-      <section id="events" className="py-16 bg-gradient-to-b from-gray-900 to-gray-800 overflow-hidden">
-        <div className="container mx-auto px-4">
+      {/* Modern Events Section */}
+      <section id="events" className="py-20 bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 overflow-hidden relative">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-5" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+        }} />
+        
+        <div className="container mx-auto px-4 md:px-6 relative z-10">
+          {/* Section Header */}
           <div className="text-center mb-12">
-            <span className="inline-block px-4 py-1 text-sm font-medium bg-brand/20 text-brand rounded-full mb-3">UPCOMING EVENTS</span>
-            <h2 className="text-4xl font-bold text-white mb-3">Don't Miss Out</h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">Experience the best in entertainment with our curated selection of upcoming events, concerts, and shows.</p>
+            <div className="inline-flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-brand/20 to-purple-500/20 border border-brand/30 rounded-full mb-4">
+              <span className="text-2xl">🎭</span>
+              <span className="text-sm font-bold text-brand uppercase tracking-wider">Upcoming Events</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-black text-white mb-4">
+              Don't Miss Out
+            </h2>
+            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+              Experience the best in entertainment with our curated selection of concerts, theater shows, and live events.
+            </p>
           </div>
 
-          {/* Categories */}
-          <div className="flex justify-center gap-4 mb-8">
-            {['All', 'Concerts', 'Theater', 'Sports', 'Comedy', 'Family'].map((category) => (
+          {/* Category Filters */}
+          <div className="flex flex-wrap justify-center gap-3 mb-10">
+            {[
+              { label: 'All', icon: '🎪' },
+              { label: 'Concerts', icon: '🎵' },
+              { label: 'Theater', icon: '🎭' },
+              { label: 'Sports', icon: '⚽' },
+              { label: 'Comedy', icon: '😂' },
+              { label: 'Family', icon: '👨‍👩‍👧‍👦' }
+            ].map((category) => (
               <button 
-                key={category}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                  category === 'All' 
-                    ? 'bg-brand text-white' 
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                key={category.label}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all duration-300 transform hover:scale-105 ${
+                  category.label === 'All' 
+                    ? 'bg-gradient-to-r from-brand to-pink-600 text-white shadow-lg shadow-brand/50' 
+                    : 'bg-gray-800/80 backdrop-blur-sm text-gray-300 hover:bg-gray-700 border border-white/10'
                 }`}
               >
-                {category}
+                <span>{category.icon}</span>
+                {category.label}
               </button>
             ))}
           </div>
