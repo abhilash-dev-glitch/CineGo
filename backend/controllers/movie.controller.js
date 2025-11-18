@@ -94,8 +94,22 @@ exports.getAllMovies = async (req, res, next) => {
         populate: { path: 'theater', select: 'name' }
       });
       
+    } else if (viewFilter === 'all') {
+      // ALL MOVIES: For admin panel - return all movies regardless of showtimes
+      const features = new APIFeatures(Movie.find({}), req.query)
+        .filter()
+        .sort()
+        .limitFields()
+        .paginate();
+      
+      movies = await features.query.populate({
+        path: 'showtimes',
+        match: { startTime: { $gte: now }, isActive: true },
+        populate: { path: 'theater', select: 'name' }
+      });
+      
     } else {
-      // ALL or TOP-RATED: Show only movies with active showtimes (default behavior)
+      // DEFAULT or TOP-RATED: Show only movies with active showtimes
       const Showtime = require('../models/Showtime');
       const activeShowtimes = await Showtime.find({
         startTime: { $gte: now },

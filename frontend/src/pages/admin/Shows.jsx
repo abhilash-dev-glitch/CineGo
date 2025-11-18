@@ -102,16 +102,33 @@ export default function AdminShows() {
       setError(null);
       
       // Fetch all data in parallel
+      // For admin, we need ALL movies (including inactive ones) to create shows
       const [showsResponse, moviesResponse, theatersResponse] = await Promise.all([
         adminService.getShowtimes(),
-        adminService.getMovies(),
+        adminService.getMovies({ view: 'all' }), // Fetch all movies for admin
         adminService.getTheaters(),
       ]);
       
+      console.log('📊 Admin Shows - Fetched Data:', {
+        shows: showsResponse,
+        movies: moviesResponse,
+        theaters: theatersResponse
+      });
+      
       // Extract and set data based on response structure
-      setShowtimes(extractData(showsResponse, 'showtimes'));
-      setMovies(extractData(moviesResponse, 'movies'));
-      setTheaters(extractData(theatersResponse, 'theaters'));
+      const extractedShows = extractData(showsResponse, 'showtimes');
+      const extractedMovies = extractData(moviesResponse, 'movies');
+      const extractedTheaters = extractData(theatersResponse, 'theaters');
+      
+      console.log('📊 Admin Shows - Extracted Data:', {
+        shows: extractedShows.length,
+        movies: extractedMovies.length,
+        theaters: extractedTheaters.length
+      });
+      
+      setShowtimes(extractedShows);
+      setMovies(extractedMovies);
+      setTheaters(extractedTheaters);
     } catch (err) {
       console.error('Error fetching data:', err);
       setError('Failed to load show data.');
