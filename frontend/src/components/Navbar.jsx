@@ -32,7 +32,7 @@ export default function Navbar() {
   const navItems = (isAdmin || isTheaterManager)
     ? [] 
     : [
-        { to: '/#movies', label: 'Movies' },
+        { to: '/movies', label: 'Movies' },
         { to: '/stream', label: 'Stream' },
         { to: '/#events', label: 'Events' },
         { to: '/plays', label: 'Plays' },

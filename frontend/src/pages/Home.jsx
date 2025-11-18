@@ -288,8 +288,8 @@ export default function Home() {
 
               {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 animate-slide-up animation-delay-400 mb-8 sm:mb-12">
-                <a 
-                  href="#movies" 
+                <Link 
+                  to="/movies" 
                   className="group relative inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-red-600 to-pink-600 text-white text-sm sm:text-base font-semibold rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-red-500/50"
                 >
                   <span className="relative z-10 flex items-center">
@@ -299,7 +299,7 @@ export default function Home() {
                     </svg>
                   </span>
                   <div className="absolute inset-0 bg-gradient-to-r from-pink-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                </a>
+                </Link>
                 
                 <a 
                   href="#events" 
