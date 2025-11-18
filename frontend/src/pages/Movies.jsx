@@ -5,7 +5,7 @@ import MovieCard from '../components/MovieCard';
 import { toast } from '../lib/toast';
 import { FiClock, FiCalendar, FiStar } from 'react-icons/fi';
 
-// Updated Movies Page with 4 filters: Now Showing, All Movies, New Releases, Coming Soon
+// Movies Page v2.0 - 4 Filters: Now Showing, All Movies, New Releases, Coming Soon
 export default function Movies() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [movies, setMovies] = useState([]);
@@ -84,13 +84,15 @@ export default function Movies() {
     fetchMovies();
   }, [filter]);
 
-  // Filter buttons configuration
+  // Filter buttons configuration - v2.0
   const filters = [
     { id: 'now-showing', label: 'Now Showing', icon: FiClock },
     { id: 'all-movies', label: 'All Movies', icon: FiStar },
     { id: 'new-releases', label: 'New Releases', icon: FiStar },
     { id: 'coming-soon', label: 'Coming Soon', icon: FiCalendar }
   ];
+  
+  console.log('Movies Page v2.0 loaded with filters:', filters.map(f => f.label));
 
   const getHeroContent = () => {
     switch(filter) {
