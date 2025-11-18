@@ -37,7 +37,14 @@ exports.register = async (req, res, next) => {
     });
 
     // Send welcome notification (async via queue)
-    await sendWelcomeNotification(user);
+    console.log('📧 Sending welcome notification to:', user.name, user.email);
+    await sendWelcomeNotification(user)
+      .then(result => {
+        console.log('✅ Welcome notification sent:', result);
+      })
+      .catch(err => {
+        console.error('❌ Error sending welcome notification:', err);
+      });
 
     // Broadcast WebSocket event for new user
     broadcast({

@@ -338,10 +338,18 @@ exports.createBooking = async (req, res, next) => {
         },
       })
       .then(populatedBooking => {
+        console.log('📧 Sending booking confirmation notification...');
+        console.log('User:', populatedBooking.user.name, populatedBooking.user.email);
+        
         // Send booking confirmation notification
-        sendBookingConfirmation(populatedBooking, req.user, { sms: true }).catch(err => {
-          console.error('Error sending booking confirmation:', err);
-        });
+        // Use populatedBooking.user instead of req.user
+        sendBookingConfirmation(populatedBooking, populatedBooking.user, { sms: true })
+          .then(result => {
+            console.log('✅ Notification sent successfully:', result);
+          })
+          .catch(err => {
+            console.error('❌ Error sending booking confirmation:', err);
+          });
 
         // Broadcast WebSocket event
         try {
@@ -500,6 +508,7 @@ exports.cancelBooking = async (req, res, next) => {
 
     // Populate booking for notification
     const populatedBooking = await Booking.findById(booking._id)
+      .populate('user', 'name email phone')
       .populate({
         path: 'showtime',
         populate: {
@@ -508,8 +517,18 @@ exports.cancelBooking = async (req, res, next) => {
         },
       });
 
+    console.log('📧 Sending cancellation notification...');
+    console.log('User:', populatedBooking.user.name, populatedBooking.user.email);
+
     // Send cancellation notification (async via queue)
-    await sendCancellationNotification(populatedBooking, req.user, { sms: true });
+    // Use populatedBooking.user instead of req.user
+    await sendCancellationNotification(populatedBooking, populatedBooking.user, { sms: true })
+      .then(result => {
+        console.log('✅ Cancellation notification sent:', result);
+      })
+      .catch(err => {
+        console.error('❌ Error sending cancellation notification:', err);
+      });
 
     // Broadcast cancellation
     if (oldStatus === 'paid') {
