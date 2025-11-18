@@ -40,13 +40,22 @@ const FormInput = ({ label, name, value, onChange, type = 'text', required = fal
     value: value || '',
     onChange,
     required,
-    className: 'w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-transparent transition-all duration-200',
+    className: as === 'select' 
+      ? 'w-full bg-gray-800 border-2 border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all duration-200 cursor-pointer hover:border-gray-500 appearance-none'
+      : 'w-full bg-gray-800 border-2 border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all duration-200',
   };
   return (
     <div>
-      <label htmlFor={name} className="block text-sm font-medium text-gray-300 mb-1.5">{label}</label>
+      <label htmlFor={name} className="block text-sm font-semibold text-gray-200 mb-2">{label}</label>
       {as === 'select' ? (
-        <select {...commonProps}>{children}</select>
+        <div className="relative">
+          <select {...commonProps}>{children}</select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </div>
+        </div>
       ) : (
         <input {...commonProps} type={type} />
       )}
@@ -659,73 +668,94 @@ export default function AdminShows() {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">Start Time (Hour)</label>
-              <select
-                name="startHour"
-                value={currentShow?.startHour || '12'}
-                onChange={(e) => {
-                  const hour = e.target.value;
-                  const minute = currentShow?.startMinute || '00';
-                  const period = currentShow?.startPeriod || 'PM';
-                  let hour24 = parseInt(hour);
-                  if (period === 'PM' && hour24 !== 12) hour24 += 12;
-                  if (period === 'AM' && hour24 === 12) hour24 = 0;
-                  const timeString = `${hour24.toString().padStart(2, '0')}:${minute}`;
-                  setCurrentShow(prev => ({ ...prev, startHour: hour, startTime: timeString }));
-                }}
-                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-brand/50"
-                required
-              >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
-              </select>
+              <label className="block text-sm font-semibold text-gray-200 mb-2">Start Time (Hour)</label>
+              <div className="relative">
+                <select
+                  name="startHour"
+                  value={currentShow?.startHour || '12'}
+                  onChange={(e) => {
+                    const hour = e.target.value;
+                    const minute = currentShow?.startMinute || '00';
+                    const period = currentShow?.startPeriod || 'PM';
+                    let hour24 = parseInt(hour);
+                    if (period === 'PM' && hour24 !== 12) hour24 += 12;
+                    if (period === 'AM' && hour24 === 12) hour24 = 0;
+                    const timeString = `${hour24.toString().padStart(2, '0')}:${minute}`;
+                    setCurrentShow(prev => ({ ...prev, startHour: hour, startTime: timeString }));
+                  }}
+                  className="w-full bg-gray-800 border-2 border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all cursor-pointer hover:border-gray-500 appearance-none"
+                  required
+                >
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">Minute</label>
-              <select
-                name="startMinute"
-                value={currentShow?.startMinute || '00'}
-                onChange={(e) => {
-                  const minute = e.target.value;
-                  const hour = currentShow?.startHour || '12';
-                  const period = currentShow?.startPeriod || 'PM';
-                  let hour24 = parseInt(hour);
-                  if (period === 'PM' && hour24 !== 12) hour24 += 12;
-                  if (period === 'AM' && hour24 === 12) hour24 = 0;
-                  const timeString = `${hour24.toString().padStart(2, '0')}:${minute}`;
-                  setCurrentShow(prev => ({ ...prev, startMinute: minute, startTime: timeString }));
-                }}
-                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-brand/50"
-                required
-              >
-                <option value="00">00</option>
-                <option value="15">15</option>
-                <option value="30">30</option>
-                <option value="45">45</option>
-              </select>
+              <label className="block text-sm font-semibold text-gray-200 mb-2">Minute</label>
+              <div className="relative">
+                <select
+                  name="startMinute"
+                  value={currentShow?.startMinute || '00'}
+                  onChange={(e) => {
+                    const minute = e.target.value;
+                    const hour = currentShow?.startHour || '12';
+                    const period = currentShow?.startPeriod || 'PM';
+                    let hour24 = parseInt(hour);
+                    if (period === 'PM' && hour24 !== 12) hour24 += 12;
+                    if (period === 'AM' && hour24 === 12) hour24 = 0;
+                    const timeString = `${hour24.toString().padStart(2, '0')}:${minute}`;
+                    setCurrentShow(prev => ({ ...prev, startMinute: minute, startTime: timeString }));
+                  }}
+                  className="w-full bg-gray-800 border-2 border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all cursor-pointer hover:border-gray-500 appearance-none"
+                  required
+                >
+                  <option value="00">00</option>
+                  <option value="15">15</option>
+                  <option value="30">30</option>
+                  <option value="45">45</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">AM/PM</label>
-              <select
-                name="startPeriod"
-                value={currentShow?.startPeriod || 'PM'}
-                onChange={(e) => {
-                  const period = e.target.value;
-                  const hour = currentShow?.startHour || '12';
-                  const minute = currentShow?.startMinute || '00';
-                  let hour24 = parseInt(hour);
-                  if (period === 'PM' && hour24 !== 12) hour24 += 12;
-                  if (period === 'AM' && hour24 === 12) hour24 = 0;
-                  const timeString = `${hour24.toString().padStart(2, '0')}:${minute}`;
-                  setCurrentShow(prev => ({ ...prev, startPeriod: period, startTime: timeString }));
-                }}
-                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-brand/50"
-                required
-              >
-                <option value="AM">AM</option>
-                <option value="PM">PM</option>
-              </select>
+              <label className="block text-sm font-semibold text-gray-200 mb-2">AM/PM</label>
+              <div className="relative">
+                <select
+                  name="startPeriod"
+                  value={currentShow?.startPeriod || 'PM'}
+                  onChange={(e) => {
+                    const period = e.target.value;
+                    const hour = currentShow?.startHour || '12';
+                    const minute = currentShow?.startMinute || '00';
+                    let hour24 = parseInt(hour);
+                    if (period === 'PM' && hour24 !== 12) hour24 += 12;
+                    if (period === 'AM' && hour24 === 12) hour24 = 0;
+                    const timeString = `${hour24.toString().padStart(2, '0')}:${minute}`;
+                    setCurrentShow(prev => ({ ...prev, startPeriod: period, startTime: timeString }));
+                  }}
+                  className="w-full bg-gray-800 border-2 border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all cursor-pointer hover:border-gray-500 appearance-none"
+                  required
+                >
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
           
